@@ -25,9 +25,13 @@ import textInfos
 import brailleDisplayDrivers
 import inputCore
 import brailleTables
-from collections import namedtuple
 import re
 import scriptHandler
+import collections
+import extensionPoints
+import hwPortUtils
+import bdDetect
+import winUser
 
 roleLabels = {
 	# Translators: Displayed in braille for an object which is a
@@ -271,7 +275,24 @@ focusContextPresentations=[
 ]
 
 #: Named tuple for a region with start and end positions in a buffer
-RegionWithPositions = namedtuple("RegionWithPositions",("region","start","end"))
+RegionWithPositions = collections.namedtuple("RegionWithPositions",("region","start","end"))
+
+#: Automatic port constant to be used by braille displays that support the "automatic" port
+#: @type: tuple
+# Translators: String representing the automatic port selection for braille displays.
+AUTOMATIC_PORT = ("auto", _("Automatic"))
+#: Used in place of a specific braille display driver name to indicate that
+#: braille displays should be automatically detected and used.
+#: @type: str
+AUTO_DISPLAY_NAME = AUTOMATIC_PORT[0]
+#: A port name which indicates that USB should be used.
+#: @type: tuple
+# Translators: String representing the USB port selection for braille displays.
+USB_PORT =  ("usb", _("USB"))
+#: A port name which indicates that Bluetooth should be used.
+#: @type: tuple
+# Translators: String representing the Bluetooth port selection for braille displays.
+BLUETOOTH_PORT =  ("bluetooth", _("Bluetooth"))
 
 def NVDAObjectHasUsefulText(obj):
 	import displayModel
@@ -1490,6 +1511,9 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		self._cells = []
 		self._cursorBlinkTimer = None
 		config.configProfileSwitched.register(self.handleConfigProfileSwitch)
+		self._detectionEnabled = False
+		self._curDisplayAutoDetected = False
+		self._detector = None
 
 	def terminate(self):
 		if self._messageCallLater:
@@ -1502,6 +1526,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		if self.display:
 			self.display.terminate()
 			self.display = None
+		self._disableDetection()
 		_BgThread.stop()
 
 	def _get_tether(self):
@@ -1517,34 +1542,46 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		else:
 			self.handleGainFocus(api.getFocusObject())
 
-	def setDisplayByName(self, name, isFallback=False):
-		if not name:
-			self.display = None
-			self.displaySize = 0
-			return
-		# See if the user have defined a specific port to connect to
-		if name not in config.conf["braille"]:
-			# No port was set.
-			config.conf["braille"][name] = {"port" : ""}
-		port = config.conf["braille"][name].get("port")
-		# Here we try to keep compatible with old drivers that don't support port setting
-		# or situations where the user hasn't set any port.
-		kwargs = {}
-		if port:
-			kwargs["port"] = port
+	def setDisplayByName(self, name, isFallback=False, detected=None):
+		if name == AUTO_DISPLAY_NAME:
+			self._enableDetection()
+			return True
+		elif not isFallback and not detected:
+			self._disableDetection()
+
+		if detected:
+			kwargs = dict(port=detected)
+		else:
+			# See if the user have defined a specific port to connect to
+			if name not in config.conf["braille"]:
+				# No port was set.
+				config.conf["braille"][name] = {"port" : ""}
+			port = config.conf["braille"][name].get("port")
+			# Here we try to keep compatible with old drivers that don't support port setting
+			# or situations where the user hasn't set any port.
+			kwargs = {}
+			if port:
+				kwargs["port"] = port
+
 		try:
 			newDisplay = _getDisplayDriver(name)
+			if detected:
+				log.debug("Possibly detected display '%s'" % newDisplay.description)
 			if newDisplay == self.display.__class__:
 				# This is the same driver as was already set, so just re-initialise it.
+				log.debug("Reinitializing %s braille display"%name)
 				self.display.terminate()
 				newDisplay = self.display
-				newDisplay.__init__(**kwargs)
+				# Re-initialize with supported kwargs.
+				extensionPoints.callWithSupportedKwargs(newDisplay.__init__, **kwargs)
 			else:
-				if newDisplay.isThreadSafe:
+				if newDisplay.isThreadSafe and not detected:
 					# Start the thread if it wasn't already.
+					# Auto detection implies the thread is already started.
 					_BgThread.start()
-				newDisplay = newDisplay(**kwargs)
+				newDisplay = newDisplay._newWithSupportedKwargs(**kwargs)
 				if self.display:
+					log.debug("Switching braille display from %s to %s"%(self.display.name,name))
 					try:
 						self.display.terminate()
 					except:
@@ -1552,12 +1589,22 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 				self.display = newDisplay
 			self.displaySize = newDisplay.numCells
 			self.enabled = bool(self.displaySize)
-			if not isFallback:
+			if isFallback:
+				self._resumeDetection()
+			elif not isFallback and not detected:
 				config.conf["braille"]["display"] = name
+			elif detected:
+				self._disableDetection()
 			log.info("Loaded braille display driver %s, current display has %d cells." %(name, self.displaySize))
+			self._curDisplayAutoDetected = bool(detected)
+			self.initialDisplay()
 			return True
 		except:
-			log.error("Error initializing display driver", exc_info=True)
+			# For auto display detection, logging an error for every failure is too obnoxious.
+			if not detected:
+				log.error("Error initializing display driver for kwargs %r"%kwargs, exc_info=True)
+			else:
+				log.debugWarning("Couldn't initialize display driver for kwargs %r"%(kwargs,), exc_info=True)
 			self.setDisplayByName("noBraille", isFallback=True)
 			return False
 
@@ -1573,7 +1620,9 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		blinkRate = config.conf["braille"]["cursorBlinkRate"]
 		if cursorShouldBlink and blinkRate:
 			self._cursorBlinkTimer = wx.PyTimer(self._blink)
-			self._cursorBlinkTimer.Start(blinkRate)
+			# This is called from the back ground thread when a display is auto detected.
+			# Make sure we start the blink timer from the main thread to avoid wx assertions
+			wx.CallAfter(self._cursorBlinkTimer.Start,blinkRate)
 
 	def _writeCells(self, cells):
 		if not self.display.isThreadSafe:
@@ -1581,7 +1630,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 				self.display.display(cells)
 			except:
 				log.error("Error displaying cells. Disabling display", exc_info=True)
-				self.setDisplayByName("noBraille", isFallback=True)
+				self.handleDisplayUnavailable()
 			return
 		with _BgThread.queuedWriteLock:
 			alreadyQueued = _BgThread.queuedWrite
@@ -1811,10 +1860,62 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 			# We're reviewing a different object.
 			self._doNewObject(getFocusRegions(reviewPos.obj, review=True))
 
+	def initialDisplay(self):
+		if not self.enabled or not api.getDesktopObject():
+			# Braille is disabled or focus/review hasn't yet been initialised.
+			return
+		if self.tether == self.TETHER_FOCUS:
+			self.handleGainFocus(api.getFocusObject())
+		else:
+			self.handleReviewMove()
+
 	def handleConfigProfileSwitch(self):
 		display = config.conf["braille"]["display"]
+		if display==AUTO_DISPLAY_NAME and self._curDisplayAutoDetected:
+			# Just keep using the detected display.
+			return
 		if display != self.display.name:
 			self.setDisplayByName(display)
+
+	def handleDisplayUnavailable(self):
+		"""Called when the braille display becomes unavailable.
+		This logs an error and disables the display.
+		This is called when displaying cells raises an exception,
+		but drivers can also call it themselves if appropriate.
+		"""
+		log.error("Braille display unavailable. Disabling", exc_info=True)
+		self._detectionEnabled = config.conf["braille"]["display"] == AUTO_DISPLAY_NAME
+		self.setDisplayByName("noBraille", isFallback=True)
+
+	def _enableDetection(self):
+		"""Enables automatic detection of braille displays.
+		When auto detection is already active, this will force a rescan for devices.
+		"""
+		if self._detectionEnabled and self._detector:
+			self._detector.rescan()
+			return
+		self._detectionEnabled = True
+		_BgThread.start()
+		config.conf["braille"]["display"] = AUTO_DISPLAY_NAME
+		self.setDisplayByName("noBraille", isFallback=True)
+		self._detector = bdDetect.Detector()
+
+	def _disableDetection(self):
+		"""Disables automatic detection of braille displays."""
+		if not self._detectionEnabled:
+			return
+		if self._detector:
+			self._detector.terminate()
+			self._detector = None
+		self._detectionEnabled = False
+
+	def _resumeDetection(self):
+		"""Resumes automatic detection of braille displays.
+		This is executed when auto detection should be resumed due to loss of display connectivity.
+		"""
+		if not self._detectionEnabled or self._detector:
+			return
+		self._detector = bdDetect.Detector()
 
 class _BgThread:
 	"""A singleton background thread used for background writes and raw braille display I/O.
@@ -1865,7 +1966,7 @@ class _BgThread:
 			handler.display.display(data)
 		except:
 			log.error("Error displaying cells. Disabling display", exc_info=True)
-			handler.setDisplayByName("noBraille", isFallback=True)
+			handler.handleDisplayUnavailable()
 
 	@classmethod
 	def func(cls):
@@ -1885,15 +1986,6 @@ def initialize():
 		config.conf["braille"]["translationTable"] = newTableName
 	handler = BrailleHandler()
 	handler.setDisplayByName(config.conf["braille"]["display"])
-
-	# Update the display to the current focus/review position.
-	if not handler.enabled or not api.getDesktopObject():
-		# Braille is disabled or focus/review hasn't yet been initialised.
-		return
-	if handler.tether == handler.TETHER_FOCUS:
-		handler.handleGainFocus(api.getFocusObject())
-	else:
-		handler.handleReviewMove()
 
 def pumpAll():
 	"""Runs tasks at the end of each core cycle. For now just caret updates."""
@@ -1943,6 +2035,15 @@ class BrailleDisplayDriver(baseObject.AutoPropertyObject):
 		"""
 		return False
 
+	@classmethod 
+	def _newWithSupportedKwargs(cls, **kwargs):
+		"""Gracefully handle situations where a port is set in the configuration
+		but where the particular driver doesn't support it.
+		"""
+		self = cls.__new__(cls)
+		extensionPoints.callWithSupportedKwargs(self.__init__, **kwargs)
+		return self
+
 	def terminate(self):
 		"""Terminate this display driver.
 		This will be called when NVDA is finished with this display driver.
@@ -1972,19 +2073,102 @@ class BrailleDisplayDriver(baseObject.AutoPropertyObject):
 		"""
 
 	#: Automatic port constant to be used by braille displays that support the "automatic" port
-	#: @type: Tupple
-	# Translators: String representing the automatic port selection for braille displays.
-	AUTOMATIC_PORT = ("auto", _("Automatic"))
+	#: Kept for backwards compatibility
+	AUTOMATIC_PORT = AUTOMATIC_PORT
 
 	@classmethod
 	def getPossiblePorts(cls):
 		""" Returns possible hardware ports for this driver.
-		If the driver supports automatic port setting it should return as the first port L{brailleDisplayDriver.AUTOMATIC_PORT}
-
+		Generally, drivers shouldn't implement this method directly.
+		Instead, they should provide automatic detection data via L{bdDetect}
+		and implement L{getPossibleManualPorts} if they support manual ports
+		such as serial ports.
 		@return: ordered dictionary of name : description for each port
 		@rtype: OrderedDict
 		"""
+		try:
+			next(bdDetect.getConnectedUsbDevicesForDriver(cls.name))
+			usb = True
+		except (LookupError, StopIteration):
+			usb = False
+		try:
+			next(bdDetect.getPossibleBluetoothDevicesForDriver(cls.name))
+			bluetooth = True
+		except (LookupError, StopIteration):
+			bluetooth = False
+		ports = collections.OrderedDict()
+		if usb or bluetooth:
+			ports.update((AUTOMATIC_PORT,))
+			if usb:
+				ports.update((USB_PORT,))
+			if bluetooth:
+				ports.update((BLUETOOTH_PORT,))
+		try:
+			ports.update(cls.getManualPorts())
+		except NotImplementedError:
+			pass
+		return ports
+
+	@classmethod
+	def _getAutoPorts(cls, usb=True, bluetooth=True):
+		"""Returns possible ports to connect to using L{bdDetect} automatic detection data.
+		@param usb: Whether to search for USB devices.
+		@type usb: bool
+		@param bluetooth: Whether to search for bluetooth devices.
+		@type bluetooth: bool
+		@return: The device match for each port.
+		@rtype: iterable of L{DeviceMatch}
+		"""
+		iters = []
+		if usb:
+			iters.append(bdDetect.getConnectedUsbDevicesForDriver(cls.name))
+		if bluetooth:
+			iters.append(bdDetect.getPossibleBluetoothDevicesForDriver(cls.name))
+
+		try:
+			for match in itertools.chain(*iters):
+				yield match
+		except LookupError:
+			pass
+
+	@classmethod
+	def getManualPorts(cls):
+		"""Get possible manual hardware ports for this driver.
+		This is for ports which cannot be detected automatically
+		such as serial ports.
+		@return: The name and description for each port.
+		@rtype: iterable of basestring, basestring
+		"""
 		raise NotImplementedError
+
+	@classmethod
+	def _getTryPorts(cls, port):
+		"""Returns the ports for this driver to which a connection attempt should be made.
+		This generator function is usually used in L{__init__} to connect to the desired display.
+		@param port: the port to connect to.
+		@type port: one of basestring or L{bdDetect.DeviceMatch}
+		@return: The name and description for each port.
+		@rtype: iterable of basestring, basestring
+		"""
+		if isinstance(port, bdDetect.DeviceMatch):
+			yield port
+		elif isinstance(port, basestring):
+			isUsb = port in (AUTOMATIC_PORT[0], USB_PORT[0])
+			isBluetooth = port in (AUTOMATIC_PORT[0], BLUETOOTH_PORT[0])
+			if not isUsb and not isBluetooth:
+				# Assume we are connecting to a com port, since these are the only manual ports supported.
+				try:
+					portInfo = next(info for info in hwPortUtils.listComPorts())
+				except StopIteration:
+					pass
+				else:
+					if "bluetoothName" in portInfo:
+						yield bdDetect.DeviceMatch(bdDetect.KEY_SERIAL, portInfo["bluetoothName"], portInfo["port"], portInfo)
+					else:
+						yield bdDetect.DeviceMatch(bdDetect.KEY_SERIAL, portInfo["friendlyName"], portInfo["port"], portInfo)
+			else:
+				for match in cls._getAutoPorts(usb=isUsb, bluetooth=isBluetooth):
+					yield match
 
 	#: Global input gesture map for this display driver.
 	#: @type: L{inputCore.GlobalGestureMap}
@@ -2137,3 +2321,27 @@ class BrailleDisplayGesture(inputCore.InputGesture):
 			return handler.display.description, key
 
 inputCore.registerGestureSource("br", BrailleDisplayGesture)
+
+
+def getSerialPorts(filterFunc=None):
+	"""Get available serial ports in a format suitable for L{BrailleDisplayDriver.getManualPorts}.
+	@param filterFunc: a function executed on every dictionary retrieved using L{hwPortUtils.listComPorts}.
+		For example, this can be used to filter by USB or Bluetooth com ports.
+	@type filterFunc: callable
+	"""
+	if filterFunc and not callable(filterFunc):
+		raise ValueError("The provided filterFunc is not callable")
+	for info in hwPortUtils.listComPorts():
+		if filterFunc and not filterFunc(info):
+			continue
+		if "bluetoothName" in info:
+			yield (info["port"],
+				# Translators: Name of a Bluetooth serial communications port.
+				_("Bluetooth Serial: {port} ({deviceName})").format(
+					port=info["port"],
+					deviceName=info["bluetoothName"]
+				))
+		else:
+			yield (info["port"],
+				# Translators: Name of a serial communications port.
+				_("Serial: {portName}").format(portName=info["friendlyName"]))

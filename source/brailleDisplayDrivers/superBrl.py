@@ -7,11 +7,11 @@
 import serial
 from collections import OrderedDict
 import braille
-import hwPortUtils
 import hwIo
 import time
 import inputCore
 from logHandler import log
+import bdDetect
 
 BAUD_RATE = 9600
 TIMEOUT = 0.5
@@ -28,49 +28,22 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver):
 	description = _("SuperBraille")
 	isThreadSafe=True
 
-	USB_IDs = {
-		"USB\\VID_10C4&PID_EA60", # SuperBraille 3.2
-	}
-
-	@classmethod
-	def getPossiblePorts(cls):
-		ports = OrderedDict()
-		comPorts = list(hwPortUtils.listComPorts(onlyAvailable=True))
-		try:
-			next(cls._getAutoPorts(comPorts))
-			ports.update((cls.AUTOMATIC_PORT,))
-		except StopIteration:
-			pass
-		for portInfo in comPorts:
-			# Translators: Name of a serial communications port.
-			ports[portInfo["port"]] = _("Serial: {portName}").format(portName=portInfo["friendlyName"])
-		return ports
-
-	@classmethod
-	def _getAutoPorts(cls, comPorts):
-		for portInfo in comPorts:
-			port = portInfo["port"]
-			hwID = portInfo["hardwareID"]
-			if any(hwID.startswith(x) for x in cls.USB_IDs):
-				portType = "USB serial"
-			else:
-				continue
-			yield port, portType
-
 	@classmethod
 	def check(cls):
-		return True
+		return (bdDetect.arePossibleDevicesForDriver(cls.name)
+			or next(cls.getManualPorts(), None) is not None)
+
+	@classmethod
+	def getManualPorts(cls):
+		return braille.getSerialPorts()
 
 	def __init__(self,port="Auto"):
 		super(BrailleDisplayDriver, self).__init__()
-		if port == "auto":
-			tryPorts = self._getAutoPorts(hwPortUtils.listComPorts(onlyAvailable=True))
-		else:
-			tryPorts = ((port, "serial"),)
-		for port, portType in tryPorts:
+		for portType, portId, port, portInfo in self._getTryPorts(port):
 			try:
 				self._dev = hwIo.Serial(port, baudrate=BAUD_RATE, stopbits=serial.STOPBITS_ONE, parity=serial.PARITY_NONE, timeout=TIMEOUT, writeTimeout=TIMEOUT, onReceive=self._onReceive)
 			except EnvironmentError:
+				log.debugWarning("", exc_info=True)
 				continue
 
 			# try to initialize the device and request number of cells
