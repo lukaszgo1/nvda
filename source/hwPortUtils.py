@@ -1,6 +1,6 @@
 #hwPortUtils.py
 #A part of NonVisual Desktop Access (NVDA)
-#Copyright (C) 2001-2016 Chris Liechti, NV Access Limited
+#Copyright (C) 2001-2017 Chris Liechti, NV Access Limited, Babbage B.V.
 # Based on serial scanner code by Chris Liechti from https://raw.githubusercontent.com/pyserial/pyserial/81167536e796cc2e13aa16abd17a14634dc3aed1/pyserial/examples/scanwin32.py
 
 """Utilities for working with hardware connection ports.

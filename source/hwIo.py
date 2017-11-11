@@ -2,7 +2,7 @@
 #A part of NonVisual Desktop Access (NVDA)
 #This file is covered by the GNU General Public License.
 #See the file COPYING for more details.
-#Copyright (C) 2015-2016 NV Access Limited
+#Copyright (C) 2015-2017 NV Access Limited, Babbage B.V.
 
 """Raw input/output for braille displays via serial and HID.
 See the L{Serial} and L{Hid} classes.
@@ -20,7 +20,6 @@ import winKernel
 import braille
 from logHandler import log
 import config
-import tones
 import time
 
 LPOVERLAPPED_COMPLETION_ROUTINE = ctypes.WINFUNCTYPE(None, DWORD, DWORD, serial.win32.LPOVERLAPPED)
