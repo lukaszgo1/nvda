@@ -2,7 +2,7 @@
 #A part of NonVisual Desktop Access (NVDA)
 #This file is covered by the GNU General Public License.
 #See the file COPYING for more details.
-# Copyright (C) 2011-2017 Rui Batista, NV Access Limited
+# Copyright (C) 2011-2017 Rui Batista, NV Access Limited, Babbage B.V.
 
 """ Braille Display driver for the BrailleNote notetakers in terminal mode.
 USB, serial and bluetooth communications are supported.
