@@ -162,10 +162,13 @@ class Detector(object):
 			if stopEvent.isSet():
 				return
 			for driver, match in getDriversForConnectedUsbDevices():
+				if stopEvent.isSet():
+					return
 				if braille.handler.setDisplayByName(driver, detected=match):
 					return
-
 		if bluetooth:
+			if stopEvent.isSet():
+				return
 			if self._btComs is None:
 				btComs = list(getDriversForPossibleBluetoothDevices())
 				# Cache Bluetooth com ports for next time.
@@ -174,10 +177,10 @@ class Detector(object):
 				btComs = self._btComs
 				btComsCache = btComs
 			for driver, match in btComs:
-				if btComsCache is not btComs:
-					btComsCache.append((driver, match))
 				if stopEvent.isSet():
 					return
+				if btComsCache is not btComs:
+					btComsCache.append((driver, match))
 				if braille.handler.setDisplayByName(driver, detected=match):
 					break
 			if stopEvent.isSet():
