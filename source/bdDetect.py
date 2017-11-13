@@ -130,10 +130,13 @@ class Detector(object):
 		self._detectUsb = False
 		self._detectBluetooth = False
 		core.hardwareChanged.register(self.rescan)
+		self._stopEvent = None
 		# Perform initial scan.
 		self._startBgScan(usb=True, bluetooth=True)
 
 	def _startBgScan(self, usb=False, bluetooth=False, callAfter=0):
+		if self._stopEvent:
+			self._stopEvent.set()
 		self._stopEvent = threading.Event()
 		self._detectUsb = usb
 		self._detectBluetooth = bluetooth
