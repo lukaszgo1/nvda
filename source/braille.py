@@ -1894,11 +1894,11 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		if self._detectionEnabled and self._detector:
 			self._detector.rescan()
 			return
-		self._detectionEnabled = True
 		_BgThread.start()
 		config.conf["braille"]["display"] = AUTO_DISPLAY_NAME
 		self.setDisplayByName("noBraille", isFallback=True)
 		self._detector = bdDetect.Detector()
+		self._detectionEnabled = True
 
 	def _disableDetection(self):
 		"""Disables automatic detection of braille displays."""
