@@ -230,7 +230,7 @@ def listComPorts(onlyAvailable=True):
 						entry["bluetoothAddress"], entry["bluetoothName"] = getWidcommBluetoothPortInfo(port)
 					except:
 						pass
-				elif "USB" in hwID:
+				elif "USB" in hwID or "FTDIBUS" in hwID:
 					usbIDStart = hwID.find("VID_")
 					if usbIDStart==-1:
 						continue
