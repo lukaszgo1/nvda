@@ -22,6 +22,7 @@ import braille
 import winKernel
 import core
 import ctypes
+from logHandler import log
 
 #: How often (in ms) to poll for Bluetooth devices.
 POLL_INTERVAL = 5000
@@ -131,6 +132,7 @@ class Detector(object):
 		self._detectBluetooth = False
 		core.hardwareChanged.register(self.rescan)
 		self._stopEvent = None
+		self._scanLock = threading.Lock()
 		# Perform initial scan.
 		self._startBgScan(usb=True, bluetooth=True)
 
@@ -157,42 +159,46 @@ class Detector(object):
 				raise ctypes.WinError()
 
 	def _bgScan(self, param):
-		# Cache variables 
-		stopEvent = self._stopEvent
-		usb = self._detectUsb
-		bluetooth = self._detectBluetooth
-		if usb:
-			if stopEvent.isSet():
-				return
-			for driver, match in getDriversForConnectedUsbDevices():
+		if self._scanLock.locked():
+			log.debug("Initiated a background scan while one was already running")
+			return
+		with self._scanLock:
+			# Cache variables 
+			stopEvent = self._stopEvent
+			usb = self._detectUsb
+			bluetooth = self._detectBluetooth
+			if usb:
 				if stopEvent.isSet():
 					return
-				if braille.handler.setDisplayByName(driver, detected=match):
+				for driver, match in getDriversForConnectedUsbDevices():
+					if stopEvent.isSet():
+						return
+					if braille.handler.setDisplayByName(driver, detected=match):
+						return
+			if bluetooth:
+				if stopEvent.isSet():
 					return
-		if bluetooth:
-			if stopEvent.isSet():
-				return
-			if self._btComs is None:
-				btComs = list(getDriversForPossibleBluetoothDevices())
-				# Cache Bluetooth com ports for next time.
-				btComsCache = []
-			else:
-				btComs = self._btComs
-				btComsCache = btComs
-			for driver, match in btComs:
+				if self._btComs is None:
+					btComs = list(getDriversForPossibleBluetoothDevices())
+					# Cache Bluetooth com ports for next time.
+					btComsCache = []
+				else:
+					btComs = self._btComs
+					btComsCache = btComs
+				for driver, match in btComs:
+					if stopEvent.isSet():
+						return
+					if btComsCache is not btComs:
+						btComsCache.append((driver, match))
+					if braille.handler.setDisplayByName(driver, detected=match):
+						return
 				if stopEvent.isSet():
 					return
 				if btComsCache is not btComs:
-					btComsCache.append((driver, match))
-				if braille.handler.setDisplayByName(driver, detected=match):
-					return
-			if stopEvent.isSet():
-				return
-			if btComsCache is not btComs:
-				self._btComs = btComsCache
-			if btComsCache:
-				# There were possible ports, so poll them periodically.
-				self._startBgScan(bluetooth=True, callAfter=POLL_INTERVAL)
+					self._btComs = btComsCache
+				if btComsCache:
+					# There were possible ports, so poll them periodically.
+					self._startBgScan(bluetooth=True, callAfter=POLL_INTERVAL)
 
 	def rescan(self):
 		"""Stop a current scan when in progress, and start scanning from scratch"""
