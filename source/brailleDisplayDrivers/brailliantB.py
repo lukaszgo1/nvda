@@ -4,9 +4,6 @@
 #See the file COPYING for more details.
 #Copyright (C) 2012-2017 NV Access Limited, Babbage B.V.
 
-import os
-import _winreg
-import itertools
 import serial
 import braille
 import inputCore
@@ -72,31 +69,6 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver):
 	def check(cls):
 		return (bdDetect.arePossibleDevicesForDriver(cls.name)
 			or next(cls.getManualPorts(), None) is not None)
-
-	@classmethod
-	def _getTryPorts(cls, port):
-		for match in super(BrailleDisplayDriver,cls)._getTryPorts(port):
-			if not match.type==bdDetect.KEY_CUSTOM:
-				yield match
-			else:
-				try:
-					rootKey = _winreg.OpenKey(_winreg.HKEY_LOCAL_MACHINE, r"SYSTEM\CurrentControlSet\Enum\USB\{usbId}".format(usbId=match.id))
-				except WindowsError:
-					continue
-				with rootKey:
-					for index in itertools.count():
-						try:
-							keyName = _winreg.EnumKey(rootKey, index)
-						except WindowsError:
-							break
-						try:
-							with _winreg.OpenKey(rootKey, os.path.join(keyName, "Device Parameters")) as paramsKey:
-								yield bdDetect.DeviceMatch(bdDetect.KEY_SERIAL, match.id,
-									_winreg.QueryValueEx(paramsKey, "PortName")[0],
-									match.deviceInfo
-								)
-						except WindowsError:
-							continue
 
 	@classmethod
 	def getManualPorts(cls):
