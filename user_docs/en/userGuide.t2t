@@ -1078,7 +1078,7 @@ When this feature is enabled and you connect a supported display using USB or bl
 
 No braille means that you are not using braille.
 
-Please see the [Supported Braille Displays #SupportedBrailleDisplays] section for more information about supported braille displays and which of these support automatic detection in the backgrounds.
+Please see the [Supported Braille Displays #SupportedBrailleDisplays] section for more information about supported braille displays and which of these support automatic detection in the background.
 
 ==== Port ====
 This option, if available, allows you to choose what port or type of connection will be used to communicate with the braille display you have selected.

@@ -48,7 +48,7 @@ KEY_HID = "hid"
 KEY_SERIAL = "serial"
 #: Key for devices with a manufacturer specific driver
 KEY_CUSTOM = "custom"
-#: Key foor bluetooth devices
+#: Key for bluetooth devices
 KEY_BLUETOOTH = "bluetooth"
 
 def _getDriver(driver):
