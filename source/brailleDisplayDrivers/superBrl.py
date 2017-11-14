@@ -29,11 +29,6 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver):
 	isThreadSafe=True
 
 	@classmethod
-	def check(cls):
-		return (bdDetect.arePossibleDevicesForDriver(cls.name)
-			or next(cls.getManualPorts(), None) is not None)
-
-	@classmethod
 	def getManualPorts(cls):
 		return braille.getSerialPorts()
 

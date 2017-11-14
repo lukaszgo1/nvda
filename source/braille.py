@@ -2033,6 +2033,15 @@ class BrailleDisplayDriver(baseObject.AutoPropertyObject):
 		@return: C{True} if this display is available, C{False} if not.
 		@rtype: bool
 		"""
+		if cls.isThreadSafe:
+			if bdDetect.arePossibleDevicesForDriver(cls.name):
+				return True
+			try:
+				next(cls.getManualPorts())
+			except (StopIteration, NotImplementedError):
+				pass
+			else:
+				return True
 		return False
 
 	@classmethod 
