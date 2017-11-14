@@ -131,15 +131,12 @@ class Detector(object):
 		self._detectUsb = False
 		self._detectBluetooth = False
 		core.hardwareChanged.register(self.rescan)
-		self._stopEvent = None
+		self._stopEvent = threading.Event()
 		self._scanLock = threading.Lock()
 		# Perform initial scan.
 		self._startBgScan(usb=True, bluetooth=True)
 
 	def _startBgScan(self, usb=False, bluetooth=False, callAfter=0):
-		if self._stopEvent:
-			self._stopEvent.set()
-		self._stopEvent = threading.Event()
 		self._detectUsb = usb
 		self._detectBluetooth = bluetooth
 		if callAfter:
@@ -161,22 +158,23 @@ class Detector(object):
 	def _bgScan(self, param):
 		if self._scanLock.locked():
 			log.debug("Initiated a background scan while one was already running")
+			self._stopEvent.set()
 			return
+		self._stopEvent.clear()
 		with self._scanLock:
 			# Cache variables 
-			stopEvent = self._stopEvent
 			usb = self._detectUsb
 			bluetooth = self._detectBluetooth
 			if usb:
-				if stopEvent.isSet():
+				if self._stopEvent.isSet():
 					return
 				for driver, match in getDriversForConnectedUsbDevices():
-					if stopEvent.isSet():
+					if self._stopEvent.isSet():
 						return
 					if braille.handler.setDisplayByName(driver, detected=match):
 						return
 			if bluetooth:
-				if stopEvent.isSet():
+				if self._stopEvent.isSet():
 					return
 				if self._btComs is None:
 					btComs = list(getDriversForPossibleBluetoothDevices())
@@ -186,13 +184,13 @@ class Detector(object):
 					btComs = self._btComs
 					btComsCache = btComs
 				for driver, match in btComs:
-					if stopEvent.isSet():
+					if self._stopEvent.isSet():
 						return
 					if btComsCache is not btComs:
 						btComsCache.append((driver, match))
 					if braille.handler.setDisplayByName(driver, detected=match):
 						return
-				if stopEvent.isSet():
+				if self._stopEvent.isSet():
 					return
 				if btComsCache is not btComs:
 					self._btComs = btComsCache
