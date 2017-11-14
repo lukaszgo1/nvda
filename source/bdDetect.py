@@ -23,6 +23,7 @@ import winKernel
 import core
 import ctypes
 from logHandler import log
+import config
 
 #: How often (in ms) to poll for Bluetooth devices.
 POLL_INTERVAL = 5000
@@ -51,6 +52,9 @@ KEY_SERIAL = "serial"
 KEY_CUSTOM = "custom"
 #: Key for bluetooth devices
 KEY_BLUETOOTH = "bluetooth"
+
+def _isDebug():
+	return config.conf["debugLog"]["hwIo"]
 
 def _getDriver(driver):
 	try:
@@ -157,7 +161,8 @@ class Detector(object):
 
 	def _bgScan(self, param):
 		if self._scanLock.locked():
-			log.debug("Initiated a background scan while one was already running")
+			if _isDebug():
+				log.debug("Initiated a background scan while one was already running")
 			self._stopEvent.set()
 			return
 		self._stopEvent.clear()

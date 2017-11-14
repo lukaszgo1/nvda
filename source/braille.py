@@ -1565,7 +1565,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 
 		try:
 			newDisplay = _getDisplayDriver(name)
-			if detected:
+			if detected and bdDetect._isDebug():
 				log.debug("Possibly detected display '%s'" % newDisplay.description)
 			if newDisplay == self.display.__class__:
 				# This is the same driver as was already set, so just re-initialise it.
@@ -1603,7 +1603,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 			# For auto display detection, logging an error for every failure is too obnoxious.
 			if not detected:
 				log.error("Error initializing display driver for kwargs %r"%kwargs, exc_info=True)
-			else:
+			elif bdDetect._isDebug():
 				log.debugWarning("Couldn't initialize display driver for kwargs %r"%(kwargs,), exc_info=True)
 			self.setDisplayByName("noBraille", isFallback=True)
 			return False
