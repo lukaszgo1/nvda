@@ -185,7 +185,7 @@ class Detector(object):
 				if btComsCache is not btComs:
 					btComsCache.append((driver, match))
 				if braille.handler.setDisplayByName(driver, detected=match):
-					break
+					return
 			if stopEvent.isSet():
 				return
 			if btComsCache is not btComs:
