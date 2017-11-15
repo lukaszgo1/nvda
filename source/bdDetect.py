@@ -24,9 +24,10 @@ import core
 import ctypes
 from logHandler import log
 import config
+import time
 
 #: How often (in ms) to poll for Bluetooth devices.
-POLL_INTERVAL = 5000
+POLL_INTERVAL = 10000
 
 _driverDevices = {}
 
@@ -136,37 +137,41 @@ class Detector(object):
 		self._detectBluetooth = False
 		core.hardwareChanged.register(self.rescan)
 		self._stopEvent = threading.Event()
-		self._scanLock = threading.Lock()
+		self._currentScanLock = threading.Lock()
+		self._scanQueued = False
+		self._queuedScanLock = threading.Lock()
 		# Perform initial scan.
 		self._startBgScan(usb=True, bluetooth=True)
 
 	def _startBgScan(self, usb=False, bluetooth=False, callAfter=0):
 		self._detectUsb = usb
 		self._detectBluetooth = bluetooth
-		if callAfter:
-			winKernel.setWaitableTimer(
-				self._pollTimerHandle,
-				callAfter,
-				0,
-				self._BgScanApc
-			)
-		else:
-			braille._BgThread.queueApc(self._BgScanApc)
+		with self._queuedScanLock:
+			if self._scanQueued:
+				return
+			if callAfter:
+				winKernel.setWaitableTimer(
+					self._pollTimerHandle,
+					callAfter,
+					completionRoutine=self._BgScanApc
+				)
+			else:
+				if not winKernel.kernel32.CancelWaitableTimer(self._pollTimerHandle):
+					raise ctypes.WinError()
+				braille._BgThread.queueApc(self._BgScanApc)
+			self._scanQueued = True
 
 	def _stopBgScan(self):
 		self._stopEvent.set()
-		if self._pollTimerHandle:
-			if not winKernel.kernel32.CancelWaitableTimer(self._pollTimerHandle):
-				raise ctypes.WinError()
 
 	def _bgScan(self, param):
-		if self._scanLock.locked():
-			if _isDebug():
-				log.debug("Initiated a background scan while one was already running")
-			self._stopEvent.set()
-			return
-		self._stopEvent.clear()
-		with self._scanLock:
+		with self._queuedScanLock:
+			if not self._scanQueued:
+				return
+			self._scanQueued = False
+		with self._currentScanLock:
+			startTime = time.time()
+			self._stopEvent.clear()
 			# Cache variables 
 			usb = self._detectUsb
 			bluetooth = self._detectBluetooth
@@ -199,9 +204,12 @@ class Detector(object):
 					return
 				if btComsCache is not btComs:
 					self._btComs = btComsCache
+				totalScanTime = int((time.time() - startTime) * 1000 )
+				if _isDebug():
+					log.debug("Braille display scan including bluetooth devices took %d miliseconds"%totalScanTime)
 				if btComsCache:
 					# There were possible ports, so poll them periodically.
-					self._startBgScan(bluetooth=True, callAfter=POLL_INTERVAL)
+					self._startBgScan(bluetooth=True, callAfter=max(POLL_INTERVAL-totalScanTime, 0))
 
 	def rescan(self):
 		"""Stop a current scan when in progress, and start scanning from scratch"""
@@ -213,6 +221,8 @@ class Detector(object):
 	def terminate(self):
 		core.hardwareChanged.unregister(self.rescan)
 		self._stopBgScan()
+		if not winKernel.kernel32.CancelWaitableTimer(self._pollTimerHandle):
+			raise ctypes.WinError()
 		winKernel.closeHandle(self._pollTimerHandle)
 
 def getConnectedUsbDevicesForDriver(driver):
