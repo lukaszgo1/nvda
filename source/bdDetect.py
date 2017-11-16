@@ -26,7 +26,6 @@ from logHandler import log
 import config
 import time
 import thread
-import tones
 
 #: How often (in ms) to poll for Bluetooth devices.
 POLL_INTERVAL = 10000

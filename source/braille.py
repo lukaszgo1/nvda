@@ -1549,8 +1549,9 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		elif not isFallback and not detected:
 			self._disableDetection()
 
+		kwargs = {}
 		if detected:
-			kwargs = dict(port=detected)
+			kwargs["port"]=detected
 		else:
 			# See if the user have defined a specific port to connect to
 			if name not in config.conf["braille"]:
@@ -1559,7 +1560,6 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 			port = config.conf["braille"][name].get("port")
 			# Here we try to keep compatible with old drivers that don't support port setting
 			# or situations where the user hasn't set any port.
-			kwargs = {}
 			if port:
 				kwargs["port"] = port
 
