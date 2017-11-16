@@ -26,6 +26,7 @@ from logHandler import log
 import config
 import time
 import thread
+import tones
 
 #: How often (in ms) to poll for Bluetooth devices.
 POLL_INTERVAL = 10000
@@ -138,9 +139,7 @@ class Detector(object):
 		self._detectBluetooth = False
 		core.hardwareChanged.register(self.rescan)
 		self._stopEvent = threading.Event()
-		self._currentScanLock = threading.Lock()
-		self._scanQueued = False
-		self._queuedScanLock = threading.Lock()
+		self._scanLock = threading.Lock()
 		# Perform initial scan.
 		self._startBgScan(usb=True, bluetooth=True)
 
@@ -149,36 +148,30 @@ class Detector(object):
 			raise RuntimeError("Delayed background scans should be queued from the braille background thread")
 		self._detectUsb = usb
 		self._detectBluetooth = bluetooth
-		with self._queuedScanLock:
-			if self._scanQueued:
-				return
-			if callAfter:
-				winKernel.setWaitableTimer(
-					self._pollTimerHandle,
-					callAfter,
-					completionRoutine=self._BgScanApc
-				)
-			else:
-				if not winKernel.kernel32.CancelWaitableTimer(self._pollTimerHandle):
-					raise ctypes.WinError()
-				braille._BgThread.queueApc(self._BgScanApc)
-			self._scanQueued = True
+		if callAfter:
+			winKernel.setWaitableTimer(
+				self._pollTimerHandle,
+				callAfter,
+				completionRoutine=self._BgScanApc
+			)
+		else:
+			braille._BgThread.queueApc(self._BgScanApc)
 
 	def _stopBgScan(self):
 		self._stopEvent.set()
+		if not winKernel.kernel32.CancelWaitableTimer(self._pollTimerHandle):
+			raise ctypes.WinError()
 
 	def _bgScan(self, param):
-		with self._queuedScanLock:
-			if not self._scanQueued:
-				return
-			self._scanQueued = False
-		with self._currentScanLock:
+		if self._scanLock.locked():
+			if _isDebug():
+				log.debugWarning("Initiated a background scan while one was already running")
+			self._stopEvent.set()
+			return
+		self._stopEvent.clear()
+		with self._scanLock:
 			startTime = time.time()
-			self._stopEvent.clear()
-			# Cache variables 
-			usb = self._detectUsb
-			bluetooth = self._detectBluetooth
-			if usb:
+			if self._detectUsb:
 				if self._stopEvent.isSet():
 					return
 				for driver, match in getDriversForConnectedUsbDevices():
@@ -186,7 +179,7 @@ class Detector(object):
 						return
 					if braille.handler.setDisplayByName(driver, detected=match):
 						return
-			if bluetooth:
+			if self._detectBluetooth:
 				if self._stopEvent.isSet():
 					return
 				if self._btComs is None:
@@ -224,8 +217,6 @@ class Detector(object):
 	def terminate(self):
 		core.hardwareChanged.unregister(self.rescan)
 		self._stopBgScan()
-		if not winKernel.kernel32.CancelWaitableTimer(self._pollTimerHandle):
-			raise ctypes.WinError()
 		winKernel.closeHandle(self._pollTimerHandle)
 
 def getConnectedUsbDevicesForDriver(driver):
