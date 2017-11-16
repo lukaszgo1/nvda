@@ -25,6 +25,7 @@ import ctypes
 from logHandler import log
 import config
 import time
+import thread
 
 #: How often (in ms) to poll for Bluetooth devices.
 POLL_INTERVAL = 10000
@@ -144,6 +145,8 @@ class Detector(object):
 		self._startBgScan(usb=True, bluetooth=True)
 
 	def _startBgScan(self, usb=False, bluetooth=False, callAfter=0):
+		if callAfter and thread.get_ident() != braille._BgThread.thread.ident:
+			raise RuntimeError("Delayed background scans should be queued from the braille background thread")
 		self._detectUsb = usb
 		self._detectBluetooth = bluetooth
 		with self._queuedScanLock:
