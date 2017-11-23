@@ -2167,7 +2167,7 @@ class BrailleDisplayDriver(baseObject.AutoPropertyObject):
 			if not isUsb and not isBluetooth:
 				# Assume we are connecting to a com port, since these are the only manual ports supported.
 				try:
-					portInfo = next(info for info in hwPortUtils.listComPorts())
+					portInfo = next(info for info in hwPortUtils.listComPorts() if info["port"]==port)
 				except StopIteration:
 					pass
 				else:
