@@ -382,6 +382,24 @@ addBluetoothDevices("handyTech", lambda m: any(m.id.startswith(prefix) for prefi
 	"Easy Braille EBR",
 )))
 
+# Hims
+# Bulk devices
+addUsbDevices("hims", KEY_CUSTOM, {
+	"VID_045E&PID_930A", # Braille Sense & Smart Beetle
+	"VID_045E&PID_930B", # Braille EDGE 40
+})
+
+# Sync Braille, serial device
+addUsbDevices("hims", KEY_SERIAL, {
+	"VID_0403&PID_6001",
+})
+
+addBluetoothDevices("hims", lambda m: any(m.id.startswith(prefix) for prefix in (
+	"BrailleSense",
+	"BrailleEDGE",
+	"SmartBeetle",
+)))
+
 # superBrl
 addUsbDevices("superBrl", KEY_SERIAL, {
 	"VID_10C4&PID_EA60", # SuperBraille 3.2
