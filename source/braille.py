@@ -1862,6 +1862,11 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 			# We're reviewing a different object.
 			self._doNewObject(getFocusRegions(reviewPos.obj, review=True))
 
+	def handleForeground(self):
+		"""Ëxecuted when the foreground object changes."""
+		if self._detectionEnabled and self._detector:
+			self._detector.pollBluetoothDevices()
+
 	def initialDisplay(self):
 		if not self.enabled or not api.getDesktopObject():
 			# Braille is disabled or focus/review hasn't yet been initialised.

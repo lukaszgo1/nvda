@@ -133,7 +133,6 @@ class Detector(object):
 	def __init__(self):
 		self._BgScanApc = winKernel.PAPCFUNC(self._bgScan)
 		self._btComs = None
-		self._pollTimerHandle = winKernel.createWaitableTimer()
 		self._detectUsb = False
 		self._detectBluetooth = False
 		core.hardwareChanged.register(self.rescan)
@@ -142,24 +141,13 @@ class Detector(object):
 		# Perform initial scan.
 		self._startBgScan(usb=True, bluetooth=True)
 
-	def _startBgScan(self, usb=False, bluetooth=False, callAfter=0):
-		if callAfter and thread.get_ident() != braille._BgThread.thread.ident:
-			raise RuntimeError("Delayed background scans should be queued from the braille background thread")
+	def _startBgScan(self, usb=False, bluetooth=False):
 		self._detectUsb = usb
 		self._detectBluetooth = bluetooth
-		if callAfter:
-			winKernel.setWaitableTimer(
-				self._pollTimerHandle,
-				callAfter,
-				completionRoutine=self._BgScanApc
-			)
-		else:
-			braille._BgThread.queueApc(self._BgScanApc)
+		braille._BgThread.queueApc(self._BgScanApc)
 
 	def _stopBgScan(self):
 		self._stopEvent.set()
-		if not winKernel.kernel32.CancelWaitableTimer(self._pollTimerHandle):
-			raise ctypes.WinError()
 
 	def _bgScan(self, param):
 		if self._scanLock.locked():
@@ -202,16 +190,20 @@ class Detector(object):
 				totalScanTime = int((time.time() - startTime) * 1000 )
 				if _isDebug():
 					log.debug("Braille display scan including bluetooth devices took %d miliseconds"%totalScanTime)
-				if btComsCache:
-					# There were possible ports, so poll them periodically.
-					self._startBgScan(bluetooth=True, callAfter=max(POLL_INTERVAL-totalScanTime, 0))
 
 	def rescan(self):
-		"""Stop a current scan when in progress, and start scanning from scratch"""
+		"""Stop a current scan when in progress, and start scanning from scratch."""
 		self._stopBgScan()
 		# A Bluetooth com port might have been added.
 		self._btComs = None
 		self._startBgScan(usb=True, bluetooth=True)
+
+	def pollBluetoothDevices(self):
+		"""Poll bluetooth devices that might be in range.
+		This does not cancel the current scan and only queues a new scan when no scan is in progress."""
+		if not self._btComs or self._scanLock.locked()::
+			Return
+		self._startBgScan(bluetooth=True)
 
 	def terminate(self):
 		core.hardwareChanged.unregister(self.rescan)

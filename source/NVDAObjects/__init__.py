@@ -957,6 +957,7 @@ This code is executed if a gain focus event is received by this object.
 		L{event_focusEntered} or L{event_gainFocus} will be called for this object, so this method should not speak/braille the object, etc.
 		"""
 		speech.cancelSpeech()
+		braille.handler.handleForeground()
 
 	def event_becomeNavigatorObject(self):
 		"""Called when this object becomes the navigator object.
