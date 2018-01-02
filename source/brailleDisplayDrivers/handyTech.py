@@ -19,7 +19,6 @@ from globalCommands import SCRCAT_BRAILLE
 from logHandler import log
 import bdDetect
 
-TIMEOUT = 0.2
 BAUD_RATE = 19200
 PARITY = serial.PARITY_ODD
 
@@ -451,6 +450,8 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver, ScriptableObject):
 	# Translators: The name of a series of braille displays.
 	description = _("Handy Tech braille displays")
 	isThreadSafe = True
+	receivesAckPackets = True
+	timeout = 0.2
 
 	@classmethod
 	def getManualPorts(cls):
@@ -463,8 +464,6 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver, ScriptableObject):
 		self._ignoreKeyReleases = False
 		self._keysDown = set()
 		self._brailleInput = False
-		self._pendingCells = []
-		self._awaitingACK = False
 		self._hidSerialBuffer = ""
 
 		for portType, portId, port, portInfo in self._getTryPorts(port):
@@ -482,7 +481,7 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver, ScriptableObject):
 						self._dev.write(HT_HID_RPT_InCommand + HT_HID_CMD_FlushBuffers)
 				else:
 					self._dev = hwIo.Serial(port, baudrate=BAUD_RATE, parity=PARITY,
-						timeout=TIMEOUT, writeTimeout=TIMEOUT, onReceive=self._onReceive)
+						timeout=self.timeout, writeTimeout=self.timeout, onReceive=self._onReceive)
 			except EnvironmentError:
 				log.debugWarning("", exc_info=True)
 				continue
@@ -490,7 +489,7 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver, ScriptableObject):
 			self.sendPacket(HT_PKT_RESET)
 			for _i in xrange(3):
 				# An expected response hasn't arrived yet, so wait for it.
-				self._dev.waitForRead(TIMEOUT)
+				self._dev.waitForRead(self.timeout)
 				if self.numCells and self._model:
 					break
 
@@ -558,13 +557,6 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver, ScriptableObject):
 		# Any further releases are just the rest of the keys in the combination
 		# being released, so they should be ignored.
 		self._ignoreKeyReleases = True
-
-	def _handleAck(self):
-		if not self._awaitingACK:
-			return
-		self._awaitingACK = False
-		if self._pendingCells:
-			self.display(self._pendingCells)
 
 	# pylint: disable=R0912
 	# Pylint complains about many branches, might be worth refactoring
@@ -677,13 +669,8 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver, ScriptableObject):
 
 
 	def display(self, cells):
-		if not self._awaitingACK:
-			# cells will already be padded up to numCells.
-			self._model.display(cells)
-			self._awaitingACK = True
-			self._pendingCells = []
-		else:
-			self._pendingCells = cells
+		# cells will already be padded up to numCells.
+		self._model.display(cells)
 
 	scriptCategory = SCRCAT_BRAILLE
 
