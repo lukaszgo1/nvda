@@ -1573,14 +1573,22 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 				log.debug("Reinitializing %s braille display"%name)
 				self.display.terminate()
 				newDisplay = self.display
-				# Re-initialize with supported kwargs.
-				extensionPoints.callWithSupportedKwargs(newDisplay.__init__, **kwargs)
+				try:
+					newDisplay.__init__(**kwargs)
+				except TypeError:
+					# Re-initialize with supported kwargs.
+					extensionPoints.callWithSupportedKwargs(newDisplay.__init__, **kwargs)
 			else:
 				if newDisplay.isThreadSafe and not detected:
 					# Start the thread if it wasn't already.
 					# Auto detection implies the thread is already started.
 					_BgThread.start()
-				newDisplay = newDisplay._newWithSupportedKwargs(**kwargs)
+				try:
+					newDisplay = newDisplay(**kwargs)
+				except TypeError:
+					newDisplay = newDisplay.__new__(newDisplay)
+					# initialize with supported kwargs.
+					extensionPoints.callWithSupportedKwargs(newDisplay.__init__, **kwargs)
 				if self.display:
 					log.debug("Switching braille display from %s to %s"%(self.display.name,name))
 					try:
@@ -2100,15 +2108,6 @@ class BrailleDisplayDriver(baseObject.AutoPropertyObject):
 			else:
 				return True
 		return False
-
-	@classmethod 
-	def _newWithSupportedKwargs(cls, **kwargs):
-		"""Gracefully handle situations where a port is set in the configuration
-		but where the particular driver doesn't support it.
-		"""
-		self = cls.__new__(cls)
-		extensionPoints.callWithSupportedKwargs(self.__init__, **kwargs)
-		return self
 
 	def terminate(self):
 		"""Terminate this display driver.
