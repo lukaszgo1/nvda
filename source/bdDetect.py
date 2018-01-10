@@ -208,7 +208,6 @@ class Detector(object):
 	def terminate(self):
 		core.hardwareChanged.unregister(self.rescan)
 		self._stopBgScan()
-		winKernel.closeHandle(self._pollTimerHandle)
 
 def getConnectedUsbDevicesForDriver(driver):
 	"""Get any connected USB devices associated with a particular driver.

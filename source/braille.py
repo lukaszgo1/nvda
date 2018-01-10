@@ -1517,6 +1517,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		self._detector = None
 
 	def terminate(self):
+		self._disableDetection()
 		if self._messageCallLater:
 			self._messageCallLater.Stop()
 			self._messageCallLater = None
@@ -1527,7 +1528,6 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		if self.display:
 			self.display.terminate()
 			self.display = None
-		self._disableDetection()
 		_BgThread.stop()
 
 	def _get_tether(self):
