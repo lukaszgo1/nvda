@@ -201,7 +201,7 @@ class Detector(object):
 	def pollBluetoothDevices(self):
 		"""Poll bluetooth devices that might be in range.
 		This does not cancel the current scan and only queues a new scan when no scan is in progress."""
-		if not self._btComs or self._scanLock.locked()::
+		if not self._btComs or self._scanLock.locked():
 			Return
 		self._startBgScan(bluetooth=True)
 
