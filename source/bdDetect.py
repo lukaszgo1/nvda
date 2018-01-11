@@ -139,6 +139,7 @@ class Detector(object):
 		core.windowMessageReceived.register(self.handleWindowMessage)
 		self._stopEvent = threading.Event()
 		self._scanLock = threading.Lock()
+		self._queuedSscanLock = threading.Lock()
 		self._scanQueued = False
 		# Perform initial scan.
 		self._startBgScan(usb=True, bluetooth=True)
@@ -146,18 +147,19 @@ class Detector(object):
 	def _startBgScan(self, usb=False, bluetooth=False):
 		self._detectUsb = usb
 		self._detectBluetooth = bluetooth
-		if not self._scanQueued:
-			braille._BgThread.queueApc(self._BgScanApc)
-			self._scanQueued = True
+		with self._queuedSscanLock:
+			if not self._scanQueued:
+				braille._BgThread.queueApc(self._BgScanApc)
+				self._scanQueued = True
 
 	def _stopBgScan(self):
 		self._stopEvent.set()
 
 	def _bgScan(self, param):
 		self._stopEvent.clear()
-		self._scanQueued = False
+		with self._queuedSscanLock:
+			self._scanQueued = False
 		with self._scanLock:
-			startTime = time.time()
 			if self._detectUsb:
 				if self._stopEvent.isSet():
 					return
@@ -187,9 +189,6 @@ class Detector(object):
 					return
 				if btComsCache is not btComs:
 					self._btComs = btComsCache
-				totalScanTime = int((time.time() - startTime) * 1000 )
-				if _isDebug():
-					log.debug("Braille display scan including bluetooth devices took %d miliseconds"%totalScanTime)
 
 	def rescan(self):
 		"""Stop a current scan when in progress, and start scanning from scratch."""
