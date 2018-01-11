@@ -35,11 +35,17 @@ PUMP_MAX_DELAY = 10
 #: The thread identifier of the main thread.
 mainThreadId = thread.get_ident()
 
-#: Notifies when hardware is changed on the system.
-#: This allows components to perform an action when hardware changes occur.
-#: For example, the braille display auto detection mechanism makes use of this.
-#: Handlers are called with no arguments.
-hardwareChanged = extensionPoints.Action()
+#: Notifies when a window message has been received by NVDA.
+#: This allows components to perform an action when several system events occur,
+#: such as power, screen orientation and hardware changes.
+#: Handlers are called with three arguments.
+#: @param msg: The window message.
+#: @type msg: int
+#: @param wParam: Additional message information.
+#: @type wParam: int
+#: @param lParam: Additional message information.
+#: @type lParam: int
+windowMessageReceived = extensionPoints.Action()
 
 _pump = None
 _isPumpPending = False
@@ -276,9 +282,6 @@ This initializes all modules such as audio, IAccessible, keyboard, mouse, and GU
 		ORIENTATION_NOT_INITIALIZED = 0
 		ORIENTATION_PORTRAIT = 1
 		ORIENTATION_LANDSCAPE = 2
-		# Constants for device changes
-		WM_DEVICECHANGE = 0x0219
-		DBT_DEVNODES_CHANGED = 0x0007
 
 		def __init__(self, windowName=None):
 			super(MessageWindow, self).__init__(windowName)
@@ -288,12 +291,11 @@ This initializes all modules such as audio, IAccessible, keyboard, mouse, and GU
 			self.handlePowerStatusChange()
 
 		def windowProc(self, hwnd, msg, wParam, lParam):
+			windowMessageReceived.notify(msg=msg, wParam=wParam, lParam=lParam)
 			if msg == self.WM_POWERBROADCAST and wParam == self.PBT_APMPOWERSTATUSCHANGE:
 				self.handlePowerStatusChange()
 			elif msg == self.WM_DISPLAYCHANGE:
 				self.handleScreenOrientationChange(lParam)
-			elif msg == self.WM_DEVICECHANGE and wParam == self.DBT_DEVNODES_CHANGED:
-				hardwareChanged.notify()
 
 		def handleScreenOrientationChange(self, lParam):
 			import ui

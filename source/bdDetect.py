@@ -26,6 +26,7 @@ from logHandler import log
 import config
 import time
 import thread
+from win32con import WM_DEVICECHANGE, DBT_DEVNODES_CHANGED
 
 #: How often (in ms) to poll for Bluetooth devices.
 POLL_INTERVAL = 10000
@@ -135,27 +136,26 @@ class Detector(object):
 		self._btComs = None
 		self._detectUsb = False
 		self._detectBluetooth = False
-		core.hardwareChanged.register(self.rescan)
+		core.windowMessageReceived.register(self.handleWindowMessage)
 		self._stopEvent = threading.Event()
 		self._scanLock = threading.Lock()
+		self._scanQueued = False
 		# Perform initial scan.
 		self._startBgScan(usb=True, bluetooth=True)
 
 	def _startBgScan(self, usb=False, bluetooth=False):
 		self._detectUsb = usb
 		self._detectBluetooth = bluetooth
-		braille._BgThread.queueApc(self._BgScanApc)
+		if not self._scanQueued:
+			braille._BgThread.queueApc(self._BgScanApc)
+			self._scanQueued = True
 
 	def _stopBgScan(self):
 		self._stopEvent.set()
 
 	def _bgScan(self, param):
-		if self._scanLock.locked():
-			if _isDebug():
-				log.debugWarning("Initiated a background scan while one was already running")
-			self._stopEvent.set()
-			return
 		self._stopEvent.clear()
+		self._scanQueued = False
 		with self._scanLock:
 			startTime = time.time()
 			if self._detectUsb:
@@ -198,6 +198,10 @@ class Detector(object):
 		self._btComs = None
 		self._startBgScan(usb=True, bluetooth=True)
 
+	def handleWindowMessage(self, msg=None, wParam=None):
+		if msg == WM_DEVICECHANGE and wParam == DBT_DEVNODES_CHANGED:
+			self.rescan()
+
 	def pollBluetoothDevices(self):
 		"""Poll bluetooth devices that might be in range.
 		This does not cancel the current scan and only queues a new scan when no scan is in progress."""
@@ -206,7 +210,7 @@ class Detector(object):
 		self._startBgScan(bluetooth=True)
 
 	def terminate(self):
-		core.hardwareChanged.unregister(self.rescan)
+		core.windowMessageReceived.unregister(self.handleWindowMessage)
 		self._stopBgScan()
 
 def getConnectedUsbDevicesForDriver(driver):
