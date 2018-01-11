@@ -135,7 +135,6 @@ class Detector(object):
 		self._detectBluetooth = False
 		core.windowMessageReceived.register(self.handleWindowMessage)
 		self._stopEvent = threading.Event()
-		self._scanLock = threading.Lock()
 		self._queuedSscanLock = threading.Lock()
 		self._scanQueued = False
 		# Perform initial scan.
@@ -156,36 +155,35 @@ class Detector(object):
 		self._stopEvent.clear()
 		with self._queuedSscanLock:
 			self._scanQueued = False
-		with self._scanLock:
-			if self._detectUsb:
+		if self._detectUsb:
+			if self._stopEvent.isSet():
+				return
+			for driver, match in getDriversForConnectedUsbDevices():
 				if self._stopEvent.isSet():
 					return
-				for driver, match in getDriversForConnectedUsbDevices():
-					if self._stopEvent.isSet():
-						return
-					if braille.handler.setDisplayByName(driver, detected=match):
-						return
-			if self._detectBluetooth:
-				if self._stopEvent.isSet():
+				if braille.handler.setDisplayByName(driver, detected=match):
 					return
-				if self._btComs is None:
-					btComs = list(getDriversForPossibleBluetoothDevices())
-					# Cache Bluetooth com ports for next time.
-					btComsCache = []
-				else:
-					btComs = self._btComs
-					btComsCache = btComs
-				for driver, match in btComs:
-					if self._stopEvent.isSet():
-						return
-					if btComsCache is not btComs:
-						btComsCache.append((driver, match))
-					if braille.handler.setDisplayByName(driver, detected=match):
-						return
+		if self._detectBluetooth:
+			if self._stopEvent.isSet():
+				return
+			if self._btComs is None:
+				btComs = list(getDriversForPossibleBluetoothDevices())
+				# Cache Bluetooth com ports for next time.
+				btComsCache = []
+			else:
+				btComs = self._btComs
+				btComsCache = btComs
+			for driver, match in btComs:
 				if self._stopEvent.isSet():
 					return
 				if btComsCache is not btComs:
-					self._btComs = btComsCache
+					btComsCache.append((driver, match))
+				if braille.handler.setDisplayByName(driver, detected=match):
+					return
+			if self._stopEvent.isSet():
+				return
+			if btComsCache is not btComs:
+				self._btComs = btComsCache
 
 	def rescan(self):
 		"""Stop a current scan when in progress, and start scanning from scratch."""
@@ -201,7 +199,7 @@ class Detector(object):
 	def pollBluetoothDevices(self):
 		"""Poll bluetooth devices that might be in range.
 		This does not cancel the current scan and only queues a new scan when no scan is in progress."""
-		if not self._btComs or self._scanLock.locked():
+		if not self._btComs:
 			return
 		self._startBgScan(bluetooth=True)
 
