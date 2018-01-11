@@ -14,7 +14,7 @@ For drivers in add-ons, this must be done in a global plugin.
 """
 
 import itertools
-from collections import namedtuple, defaultdict
+from collections import namedtuple, defaultdict, OrderedDict
 import threading
 import wx
 import hwPortUtils
@@ -28,10 +28,7 @@ import time
 import thread
 from win32con import WM_DEVICECHANGE, DBT_DEVNODES_CHANGED
 
-#: How often (in ms) to poll for Bluetooth devices.
-POLL_INTERVAL = 10000
-
-_driverDevices = {}
+_driverDevices = OrderedDict()
 
 class DeviceMatch(
 	namedtuple("DeviceMatch", ("type","id", "port", "deviceInfo"))
