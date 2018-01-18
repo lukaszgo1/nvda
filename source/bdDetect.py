@@ -261,7 +261,16 @@ def arePossibleDevicesForDriver(driver):
 	), None))
 
 ### Detection data
-# baum
+# ALVA
+addUsbDevices("alva", KEY_HID, {
+	"VID_0798&PID_0640", # BC640
+	"VID_0798&PID_0680", # BC680
+	"VID_0798&PID_0699", # USB protocol converter
+})
+
+addBluetoothDevices("alva", lambda m: m.id.startswith("ALVA "))
+
+# Baum
 addUsbDevices("baum", KEY_HID, {
 	"VID_0904&PID_3001", # RefreshaBraille 18
 	"VID_0904&PID_6101", # VarioUltra 20
