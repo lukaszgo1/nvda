@@ -261,7 +261,7 @@ def arePossibleDevicesForDriver(driver):
 	), None))
 
 ### Detection data
-# ALVA
+# alva
 addUsbDevices("alva", KEY_HID, {
 	"VID_0798&PID_0640", # BC640
 	"VID_0798&PID_0680", # BC680
@@ -270,7 +270,7 @@ addUsbDevices("alva", KEY_HID, {
 
 addBluetoothDevices("alva", lambda m: m.id.startswith("ALVA "))
 
-# Baum
+# baum
 addUsbDevices("baum", KEY_HID, {
 	"VID_0904&PID_3001", # RefreshaBraille 18
 	"VID_0904&PID_6101", # VarioUltra 20
@@ -342,6 +342,29 @@ addUsbDevices("brailliantB", KEY_SERIAL, {"VID_1C71&PID_C005"})
 addBluetoothDevices("brailliantB", lambda m:
 	m.id.startswith("Brailliant B") or m.id == "Brailliant 80")
 
+# eurobraille
+addUsbDevices("eurobraille", KEY_HID, {
+	"VID_C251&PID_1122", # Esys (version < 3.0, no SD card
+	"VID_C251&PID_1123", # Esys (version >= 3.0, with HID keyboard, no SD card
+	"VID_C251&PID_1124", # Esys (version < 3.0, with SD card
+	"VID_C251&PID_1125", # Esys (version >= 3.0, with HID keyboard, with SD card
+	"VID_C251&PID_1126", # Esys (version >= 3.0, no SD card
+	"VID_C251&PID_1127", # Reserved
+	"VID_C251&PID_1128", # Esys (version >= 3.0, with SD card
+	"VID_C251&PID_1129", # Reserved
+	"VID_C251&PID_112A", # Reserved
+	"VID_C251&PID_112B", # Reserved
+	"VID_C251&PID_112C", # Reserved
+	"VID_C251&PID_112D", # Reserved
+	"VID_C251&PID_112E", # Reserved
+	"VID_C251&PID_112F", # Reserved
+	"VID_C251&PID_1130", # Esytime
+	"VID_C251&PID_1131", # Reserved
+	"VID_C251&PID_1132", # Reserved
+})
+
+addBluetoothDevices("eurobraille", lambda m: m.id.startswith("Esys"))
+
 # handyTech
 addUsbDevices("handyTech", KEY_SERIAL, {
 	"VID_0403&PID_6001", # FTDI chip
@@ -380,7 +403,7 @@ addBluetoothDevices("handyTech", lambda m: any(m.id.startswith(prefix) for prefi
 	"Easy Braille EBR",
 )))
 
-# Hims
+# hims
 # Bulk devices
 addUsbDevices("hims", KEY_CUSTOM, {
 	"VID_045E&PID_930A", # Braille Sense & Smart Beetle
