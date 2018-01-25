@@ -1919,6 +1919,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 			return
 		if display != self.display.name:
 			self.setDisplayByName(display)
+		self._tether = config.conf["braille"]["tetherTo"]
 
 	def handleDisplayUnavailable(self):
 		"""Called when the braille display becomes unavailable.
