@@ -98,6 +98,12 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver, ScriptableObject):
 	def getManualPorts(cls):
 		return braille.getSerialPorts(filterFunc=lambda info: info.get("bluetoothName","").startswith("ALVA "))
 
+	def _get_model(self):
+		if not self._deviceId:
+			return ""
+		self.model = ALVA_MODEL_IDS[self._deviceId]
+		return self.model
+
 	def _updateSettings(self):
 		oldNumCells = self.numCells
 		if self.isHid:
