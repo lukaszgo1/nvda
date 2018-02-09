@@ -1839,14 +1839,6 @@ For more information, please visit the Audiologic website at www.audiologic.it.
 
 This synthesizer does not support [spelling functionality #VoiceSettingsUseSpelling].
 
-++ Nuance Vocalizer for NVDA ++[Vocalizer]
-Nuance Vocalizer is a commercial, high quality voice synthesizer developed by Nuance Communications, Inc. and packaged specifically for NVDA by Tiflotecnia, Lda.
-It contains over 50 different voices you can install, speaking over 30 languages.
-All synthesizer components and voices are bundled in add-on packages, which allows for full usage in portable copies of NVDA.
-
-You can get more information about Nuance Vocalizer for NVDA and how to buy it on its website at [www.vocalizer-nvda.com http://www.vocalizer-nvda.com/].
-A percentage of sales of this product is donated to NV Access to fund further development of the NVDA screen reader.
-
 + Supported Braille Displays +[SupportedBrailleDisplays]
 This section contains information about the Braille displays supported by NVDA.
 
@@ -1860,6 +1852,8 @@ The following displays support this automatic detection functionality.
 - HumanWare Brailliant BI/B series
 - HumanWare BrailleNote
 - SuperBraille
+- Optelec ALVA 6 series
+- Eurobraille Esys/Esytime/Iris displays
 -
 
 ++ Freedom Scientific Focus/PAC Mate Series ++[FreedomScientificFocus]
@@ -2136,7 +2130,7 @@ Please see the display's documentation for descriptions of where these keys can 
 | Say all | c1+c2+c3+c4+c5+c6 |
 %kc:endInclude
 
-++ HIMS Braille Sense/Braille EDGE/Smart Beetle/Sync Braille Series ++
+++ HIMS Braille Sense/Braille EDGE/Smart Beetle/Sync Braille Series ++[Hims]
 NVDA supports Braille Sense, Braille EDGE, Smart Beetle and Sync Braille displays from [Hims http://www.hims-inc.com/] when connected via USB or bluetooth. 
 If connecting via USB, you will need to install the USB drivers from HIMS on your system.
 You can download these from here: http://www.himsintl.com/upload/HIMS_USB_Driver_v25.zip

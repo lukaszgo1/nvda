@@ -16,7 +16,6 @@ import inputCore
 import brailleInput
 from baseObject import AutoPropertyObject
 import weakref
-import bdDetect
 import time
 
 BAUD_RATE = 115200
@@ -76,6 +75,18 @@ class BrailleSense(Model):
 	bluetoothPrefix = "BrailleSense"
 	numCells = 0 # Either 18 or 32
 
+	def _get_keys(self):
+		keys = super(BrailleSense, self)._get_keys()
+		keys.update({
+			0x20<<8: "leftSideScroll",
+			0x40<<8: "rightSideScroll",
+			0x01<<16: "leftSideScrollUp",
+			0x02<<16: "leftSideScrollDown",
+			0x04<<16: "rightSideScrollUp",
+			0x08<<16: "rightSideScrollDown",
+		})
+		return keys
+
 class BrailleEdge(Model):
 	deviceId="\x42\x45" # BE
 	name = "Braille Edge"
@@ -108,30 +119,11 @@ class BrailleEdge(Model):
 class BrailleSense2S(BrailleSense):
 	"""Braille Sense with one scroll key on both sides.
 	Also referred to as Braille Sense Classic."""
-
-	name = "Braille Sense"
+	name = "Braille Sense Classic"
 	deviceId="\x42\x53" # BS
-
-	def _get_keys(self):
-		keys = super(BrailleSense2S, self)._get_keys()
-		keys.update({
-			0x20<<8: "leftSideScroll",
-			0x40<<8: "rightSideScroll",
-		})
-		return keys
 
 class BrailleSense4S(BrailleSense):
 	deviceId="\x4c\x58" # LX
-
-	def _get_keys(self):
-		keys = super(BrailleSense4S, self)._get_keys()
-		keys.update({
-			0x01<<16: "leftSideScrollUp",
-			0x02<<16: "leftSideScrollDown",
-			0x04<<16: "rightSideScrollUp",
-			0x08<<16: "rightSideScrollDown",
-		})
-		return keys
 
 class SmartBeetle(BrailleSense4S):
 	"""Subclass for Smart Beetle device, which has the same identifier as the Braille Sense with 4 scroll keys.
@@ -149,9 +141,6 @@ class SmartBeetle(BrailleSense4S):
 			0x10<<8: "f2",
 			0x04<<16: "leftSideScroll",
 			0x08<<16: "rightSideScroll",
-			# Once in a while, a Beetle sends the wrong key codes for left and right scroll.
-			0x20<<8: "leftSideScroll",
-			0x40<<8: "rightSideScroll",
 		})
 		return keys
 
@@ -217,7 +206,6 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver):
 			except EnvironmentError:
 				log.debugWarning("", exc_info=True)
 				continue
-
 			for i in xrange(3):
 				self._sendCellCountRequest()
 				# Wait for an expected response.
