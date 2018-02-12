@@ -47,7 +47,7 @@ Information about other speech synthesizers that NVDA supports can be found in t
 ++ Braille support ++[BrailleSupport]
 For users that own a refreshable braille display, NVDA can output its information in braille.
 Both uncontracted and contracted braille input via a braille keyboard is also supported.
-Furthermore, NVDA is able to detect many braille displays automatically when set up to do so.
+Furthermore, NVDA will detect many braille displays automatically by default.
 Please see the [Supported Braille Displays #SupportedBrailleDisplays] section for information about the supported braille displays.
 
 NVDA supports braille codes for many languages, including contracted, uncontracted and computer braille codes.
@@ -1845,6 +1845,7 @@ This section contains information about the Braille displays supported by NVDA.
 ++ Displays supporting automatic detection in the background ++[AutomaticDetection]
 NVDA has the ability to detect many braille displays in the background automatically, either via USB or bluetooth.
 This behavior is achieved by selecting the Automatic option as the preferred braille display from NVDA's [Braille Settings dialog #BrailleSettings].
+This option is selected by default.
 
 The following displays support this automatic detection functionality.
 - Handy Tech displays
