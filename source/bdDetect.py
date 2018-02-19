@@ -53,6 +53,10 @@ KEY_CUSTOM = "custom"
 #: Key for bluetooth devices
 KEY_BLUETOOTH = "bluetooth"
 
+# Constants for USB and bluetooth detection to be used by the background thread scanner.
+DETECT_USB = 1
+DETECT_BLUETOOTH = 2
+
 def _isDebug():
 	return config.conf["debugLog"]["hwIo"]
 
@@ -132,8 +136,6 @@ class Detector(object):
 		self._BgScanApc = winKernel.PAPCFUNC(self._bgScan)
 		self._btComsLock = threading.Lock()
 		self._btComs = None
-		self._detectUsb = False
-		self._detectBluetooth = False
 		core.windowMessageReceived.register(self.handleWindowMessage)
 		self._stopEvent = threading.Event()
 		self._queuedScanLock = threading.Lock()
@@ -142,11 +144,10 @@ class Detector(object):
 		self._startBgScan(usb=True, bluetooth=True)
 
 	def _startBgScan(self, usb=False, bluetooth=False):
-		self._detectUsb = usb
-		self._detectBluetooth = bluetooth
+		detectionParam = usb | bluetooth << 1
 		with self._queuedScanLock:
 			if not self._scanQueued:
-				braille._BgThread.queueApc(self._BgScanApc)
+				braille._BgThread.queueApc(self._BgScanApc, param=detectionParam)
 				self._scanQueued = True
 
 	def _stopBgScan(self):
@@ -156,9 +157,11 @@ class Detector(object):
 		# Clear the stop event before a scan is started.
 		# Since a scan can take some time to complete, another thread can set the stop event to cancel it.
 		self._stopEvent.clear()
+		detectUsb = bool(param & DETECT_USB)
+		detectBluetooth = bool(param & DETECT_BLUETOOTH)
 		with self._queuedScanLock:
 			self._scanQueued = False
-		if self._detectUsb:
+		if detectUsb:
 			if self._stopEvent.isSet():
 				return
 			for driver, match in getDriversForConnectedUsbDevices():
@@ -166,16 +169,17 @@ class Detector(object):
 					return
 				if braille.handler.setDisplayByName(driver, detected=match):
 					return
-		if self._detectBluetooth:
+		if detectBluetooth:
 			if self._stopEvent.isSet():
 				return
-			if self._btComs is None:
-				btComs = list(getDriversForPossibleBluetoothDevices())
-				# Cache Bluetooth com ports for next time.
-				btComsCache = []
-			else:
-				btComs = self._btComs
-				btComsCache = btComs
+			with self._btComsLock:
+				if self._btComs is None:
+					btComs = list(getDriversForPossibleBluetoothDevices())
+					# Cache Bluetooth com ports for next time.
+					btComsCache = []
+				else:
+					btComs = self._btComs
+					btComsCache = btComs
 			for driver, match in btComs:
 				if self._stopEvent.isSet():
 					return
@@ -186,13 +190,15 @@ class Detector(object):
 			if self._stopEvent.isSet():
 				return
 			if btComsCache is not btComs:
-				self._btComs = btComsCache
+				with self._btComsLock:
+					self._btComs = btComsCache
 
 	def rescan(self):
 		"""Stop a current scan when in progress, and start scanning from scratch."""
 		self._stopBgScan()
-		# A Bluetooth com port might have been added.
-		self._btComs = None
+		with self._btComsLock:
+			# A Bluetooth com port might have been added.
+			self._btComs = None
 		self._startBgScan(usb=True, bluetooth=True)
 
 	def handleWindowMessage(self, msg=None, wParam=None):
@@ -202,8 +208,9 @@ class Detector(object):
 	def pollBluetoothDevices(self):
 		"""Poll bluetooth devices that might be in range.
 		This does not cancel the current scan and only queues a new scan when no scan is in progress."""
-		if not self._btComs:
-			return
+		with self._btComsLock:
+			if not self._btComs:
+				return
 		self._startBgScan(bluetooth=True)
 
 	def terminate(self):

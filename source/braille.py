@@ -1981,8 +1981,8 @@ class _BgThread:
 		cls.ackTimerHandle = winKernel.createWaitableTimer()
 
 	@classmethod
-	def queueApc(cls, func):
-		ctypes.windll.kernel32.QueueUserAPC(func, cls.handle, 0)
+	def queueApc(cls, func, param=0):
+		ctypes.windll.kernel32.QueueUserAPC(func, cls.handle, param)
 
 	@classmethod
 	def stop(cls):
