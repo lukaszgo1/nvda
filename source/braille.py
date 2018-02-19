@@ -1576,7 +1576,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		if detected:
 			kwargs["port"]=detected
 		else:
-			# See if the user have defined a specific port to connect to
+			# See if the user has defined a specific port to connect to
 			if name not in config.conf["braille"]:
 				# No port was set.
 				config.conf["braille"][name] = {"port" : ""}
@@ -1622,9 +1622,9 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 			self.enabled = bool(self.displaySize)
 			if isFallback:
 				self._resumeDetection()
-			elif not isFallback and not detected:
+			elif not detected:
 				config.conf["braille"]["display"] = name
-			elif detected:
+			else: # detected:
 				self._disableDetection()
 			log.info("Loaded braille display driver %s, current display has %d cells." %(name, self.displaySize))
 			self._curDisplayAutoDetected = bool(detected)
@@ -1651,7 +1651,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		blinkRate = config.conf["braille"]["cursorBlinkRate"]
 		if cursorShouldBlink and blinkRate:
 			self._cursorBlinkTimer = wx.PyTimer(self._blink)
-			# This is called from the back ground thread when a display is auto detected.
+			# This is called from the background thread when a display is auto detected.
 			# Make sure we start the blink timer from the main thread to avoid wx assertions
 			wx.CallAfter(self._cursorBlinkTimer.Start,blinkRate)
 
@@ -1899,7 +1899,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 			self._doNewObject(getFocusRegions(reviewPos.obj, review=True))
 
 	def handleForeground(self):
-		"""Ëxecuted when the foreground object changes."""
+		"""Executed when the foreground object changes."""
 		if self._detectionEnabled and self._detector:
 			self._detector.pollBluetoothDevices()
 
@@ -2135,7 +2135,7 @@ class BrailleDisplayDriver(baseObject.AutoPropertyObject):
 		@rtype: bool
 		"""
 		if cls.isThreadSafe:
-			if bdDetect.arePossibleDevicesForDriver(cls.name):
+			if bdDetect.driverHasPossibleDevices(cls.name):
 				return True
 			try:
 				next(cls.getManualPorts())

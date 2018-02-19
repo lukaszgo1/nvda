@@ -46,7 +46,7 @@ class DeviceMatch(
 # Device type constants
 #: Key constant for HID devices
 KEY_HID = "hid"
-#: Key for serial devices (com ports)
+#: Key for serial devices (COM ports)
 KEY_SERIAL = "serial"
 #: Key for devices with a manufacturer specific driver
 KEY_CUSTOM = "custom"
@@ -67,7 +67,7 @@ def addUsbDevices(driver, type, ids):
 	"""Associate USB devices with a driver.
 	@param driver: The name of the driver.
 	@type driver: str
-	@param type: The type of the driver, one of c{deviceMatchTypes.keys()}
+	@param type: The type of the driver, either C{KEY_HID}, C{KEY_SERIAL} or C{KEY_CUSTOM}.
 	@type type: str
 	@param ids: A set of USB IDs in the form C{"VID_xxxx&PID_XXXX"}.
 	@type ids: set of str
@@ -77,7 +77,7 @@ def addUsbDevices(driver, type, ids):
 	driverUsb.update(ids)
 
 def addBluetoothDevices(driver, matchFunc):
-	"""Associate Bluetooth HID or com ports with a driver.
+	"""Associate Bluetooth HID or COM ports with a driver.
 	@param driver: The name of the driver.
 	@type driver: str
 	@param matchFunc: A function which determines whether a given Bluetooth device matches.
@@ -130,12 +130,13 @@ class Detector(object):
 
 	def __init__(self):
 		self._BgScanApc = winKernel.PAPCFUNC(self._bgScan)
+		self._btComsLock = threading.Lock()
 		self._btComs = None
 		self._detectUsb = False
 		self._detectBluetooth = False
 		core.windowMessageReceived.register(self.handleWindowMessage)
 		self._stopEvent = threading.Event()
-		self._queuedSscanLock = threading.Lock()
+		self._queuedScanLock = threading.Lock()
 		self._scanQueued = False
 		# Perform initial scan.
 		self._startBgScan(usb=True, bluetooth=True)
@@ -143,7 +144,7 @@ class Detector(object):
 	def _startBgScan(self, usb=False, bluetooth=False):
 		self._detectUsb = usb
 		self._detectBluetooth = bluetooth
-		with self._queuedSscanLock:
+		with self._queuedScanLock:
 			if not self._scanQueued:
 				braille._BgThread.queueApc(self._BgScanApc)
 				self._scanQueued = True
@@ -152,8 +153,10 @@ class Detector(object):
 		self._stopEvent.set()
 
 	def _bgScan(self, param):
+		# Clear the stop event before a scan is started.
+		# Since a scan can take some time to complete, another thread can set the stop event to cancel it.
 		self._stopEvent.clear()
-		with self._queuedSscanLock:
+		with self._queuedScanLock:
 			self._scanQueued = False
 		if self._detectUsb:
 			if self._stopEvent.isSet():
@@ -247,7 +250,7 @@ def getPossibleBluetoothDevicesForDriver(driver):
 		if matchFunc(match):
 			yield match
 
-def arePossibleDevicesForDriver(driver):
+def driverHasPossibleDevices(driver):
 	"""Determine whether there are any possible devices associated with a given driver.
 	@param driver: The name of the driver.
 	@type driver: str
