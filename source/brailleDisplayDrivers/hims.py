@@ -17,6 +17,7 @@ import brailleInput
 from baseObject import AutoPropertyObject
 import weakref
 import time
+import bdDetect
 
 BAUD_RATE = 115200
 PARITY = serial.PARITY_NONE
