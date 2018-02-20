@@ -1528,6 +1528,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		self._detector = None
 
 	def terminate(self):
+		bgThreadStopTimeout = 2.5 if self._detectionEnabled else None
 		self._disableDetection()
 		if self._messageCallLater:
 			self._messageCallLater.Stop()
@@ -1539,7 +1540,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		if self.display:
 			self.display.terminate()
 			self.display = None
-		_BgThread.stop()
+		_BgThread.stop(timeout=bgThreadStopTimeout)
 
 	def getTether(self):
 		return self._tether
@@ -1985,7 +1986,7 @@ class _BgThread:
 		ctypes.windll.kernel32.QueueUserAPC(func, cls.handle, param)
 
 	@classmethod
-	def stop(cls):
+	def stop(cls, timeout=None):
 		if not cls.thread:
 			return
 		cls.exit = True
@@ -1995,7 +1996,7 @@ class _BgThread:
 		cls.ackTimerHandle = None
 		# Wake up the thread. It will exit when it sees exit is True.
 		cls.queueApc(cls.executor)
-		cls.thread.join()
+		cls.thread.join(timeout)
 		cls.exit = False
 		winKernel.closeHandle(cls.handle)
 		cls.handle = None
