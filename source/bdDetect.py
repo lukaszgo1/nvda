@@ -27,6 +27,7 @@ import config
 import time
 import thread
 from win32con import WM_DEVICECHANGE, DBT_DEVNODES_CHANGED
+import appModuleHandler
 
 _driverDevices = OrderedDict()
 
@@ -137,6 +138,7 @@ class Detector(object):
 		self._btComsLock = threading.Lock()
 		self._btComs = None
 		core.windowMessageReceived.register(self.handleWindowMessage)
+		appModuleHandler.appSwitched.register(self.pollBluetoothDevices)
 		self._stopEvent = threading.Event()
 		self._queuedScanLock = threading.Lock()
 		self._scanQueued = False
@@ -214,6 +216,7 @@ class Detector(object):
 		self._startBgScan(bluetooth=True)
 
 	def terminate(self):
+		appModuleHandler.appSwitched.unregister(self.pollBluetoothDevices)
 		core.windowMessageReceived.unregister(self.handleWindowMessage)
 		self._stopBgScan()
 
