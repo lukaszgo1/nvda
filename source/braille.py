@@ -1524,7 +1524,6 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 		config.configProfileSwitched.register(self.handleConfigProfileSwitch)
 		self._tether = config.conf["braille"]["tetherTo"]
 		self._detectionEnabled = False
-		self._curDisplayAutoDetected = False
 		self._detector = None
 
 	def terminate(self):
@@ -1566,7 +1565,11 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 	def _get_shouldAutoTether(self):
 		return self.enabled and config.conf["braille"]["autoTether"]
 
+	_lastRequestedDisplayName=None #: the name of the last requested braille display driver with setDisplayByName, even if it failed and has fallen back to no braille.
 	def setDisplayByName(self, name, isFallback=False, detected=None):
+		if not isFallback:
+			# #8032: Take note of the display requested, even if it is going to fail.
+			self._lastRequestedDisplayName=name
 		if name == AUTO_DISPLAY_NAME:
 			self._enableDetection()
 			return True
@@ -1628,7 +1631,6 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 			else: # detected:
 				self._disableDetection()
 			log.info("Loaded braille display driver %s, current display has %d cells." %(name, self.displaySize))
-			self._curDisplayAutoDetected = bool(detected)
 			self.initialDisplay()
 			return True
 		except:
@@ -1915,10 +1917,7 @@ class BrailleHandler(baseObject.AutoPropertyObject):
 
 	def handleConfigProfileSwitch(self):
 		display = config.conf["braille"]["display"]
-		if display==AUTO_DISPLAY_NAME and self._curDisplayAutoDetected:
-			# Just keep using the detected display.
-			return
-		if display != self.display.name:
+		if display != self._lastRequestedDisplayName:
 			self.setDisplayByName(display)
 		self._tether = config.conf["braille"]["tetherTo"]
 
