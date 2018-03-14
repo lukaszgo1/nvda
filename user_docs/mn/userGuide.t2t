@@ -22,7 +22,7 @@ Major highlights include:
 - Built-in speech synthesizer supporting over 80 languages
 - Reporting of textual formatting where available such as font name and size, style and spelling errors
 - Automatic announcement of text under the mouse and optional audible indication of the mouse position
-- Support for many refreshable braille displays, including the ability to detect many of them automatically as well as braille input on braille displays with a braille keyboard
+- Support for many refreshable braille displays, including braille input on braille displays with a braille keyboard
 - Ability to run entirely from a USB flash drive or other portable media without the need for installation
 - Easy to use talking installer
 - Translated into 52 languages
@@ -47,7 +47,6 @@ Information about other speech synthesizers that NVDA supports can be found in t
 ++ Braille support ++[BrailleSupport]
 For users that own a refreshable braille display, NVDA can output its information in braille.
 Both uncontracted and contracted braille input via a braille keyboard is also supported.
-Furthermore, NVDA will detect many braille displays automatically by default.
 Please see the [Supported Braille Displays #SupportedBrailleDisplays] section for information about the supported braille displays.
 
 NVDA supports braille codes for many languages, including contracted, uncontracted and computer braille codes.
@@ -601,7 +600,6 @@ If you own a braille display, NVDA can display information in braille.
 If your braille display has a Perkins-style keyboard, you can also enter contracted or uncontracted braille.
 
 Please see the [Supported Braille Displays #SupportedBrailleDisplays] section for information about the supported braille displays.
-This section also contains information about what displays support NVDA's automatic background braille display detection functionality.
 You can configure braille using the [Braille Settings dialog #BrailleSettings].
 
 ++ Control Type, State and Landmark abbreviations ++[BrailleAbbreviations]
@@ -1085,12 +1083,9 @@ The first option you will come upon in the braille settings dialog is a combo bo
 You will be presented with several options depending on what braille display drivers are available on your system.
 Move between these options with the arrow keys.
 
-The automatic option will allow NVDA to search for many supported braille displays in the background.
-When this feature is enabled and you connect a supported display using USB or bluetooth, NVDA will automatically connect with this display.
-
 No braille means that you are not using braille.
 
-Please see the [Supported Braille Displays #SupportedBrailleDisplays] section for more information about supported braille displays and which of these support automatic detection in the background.
+Please see the [Supported Braille Displays #SupportedBrailleDisplays] section for more information about supported braille displays.
 
 ==== Port ====[BrailleSettingsPort]
 This option, if available, allows you to choose what port or type of connection will be used to communicate with the braille display you have selected.
@@ -1760,11 +1755,10 @@ NVDA will ask if you really wish to do this.
 As with installing, NVDA must be restarted for the add-on to be fully  removed.
 Until you do, a status of "remove" will be shown for that add-on in the list.
 
-To disable an add-on, press the "disable" button.
-To enable a previously disabled add-on, press the "enable" button.
-You can disable an add-on if the add-on status indicates it is  "enabled", or enable it if the add-on is "disabled".
+To disable an add-on, press the disable button.
+To enable a previously disabled add-on, press the enable button.
+You can disable an add-on if the add-on status indicates it is running or enabled, or enable it if the add-on is suspended or disabled.
 For each press of the enable/disable button, add-on status changes to indicate what will happen when NVDA restarts.
-If the addon was previously disabled, a status will show "enabled after restart". If the addon was previously "Enabled", a status will show "disabled after restart"
 Just like when you install or remove add-ons, you need to restart NVDA in order for changes to take effect.
 
 The manager also has a Close button to close the dialog.
@@ -1843,22 +1837,6 @@ This synthesizer does not support [spelling functionality #VoiceSettingsUseSpell
 + Supported Braille Displays +[SupportedBrailleDisplays]
 This section contains information about the Braille displays supported by NVDA.
 
-++ Displays supporting automatic detection in the background ++[AutomaticDetection]
-NVDA has the ability to detect many braille displays in the background automatically, either via USB or bluetooth.
-This behavior is achieved by selecting the Automatic option as the preferred braille display from NVDA's [Braille Settings dialog #BrailleSettings].
-This option is selected by default.
-
-The following displays support this automatic detection functionality.
-- Handy Tech displays
-- Baum/Humanware/APH/Orbit braille displays
-- HumanWare Brailliant BI/B series
-- HumanWare BrailleNote
-- SuperBraille
-- Optelec ALVA 6 series
-- HIMS Braille Sense/Braille EDGE/Smart Beetle/Sync Braille Series
-- Eurobraille Esys/Esytime/Iris displays
--
-
 ++ Freedom Scientific Focus/PAC Mate Series ++[FreedomScientificFocus]
 All Focus and PAC Mate displays from [Freedom Scientific http://www.freedomscientific.com/] are supported when connected via USB or bluetooth.
 You will need the Freedom Scientific braille display drivers installed on your system.
@@ -1869,8 +1847,6 @@ If your system is running 64 bit Windows and the drivers were already installed 
 By default, NVDA can automatically detect and connect to these displays either via USB or bluetooth.
 However, when configuring the display, you can explicitly select "USB" or "Bluetooth" ports to restrict the connection type to be used.
 This might be useful if you want to connect the focus display to NVDA using bluetooth, but still be able to charge it using USB power from your computer.
-
-These displays do not yet support NVDA's automatic background braille display detection functionality.
 
 Following are the key assignments for this display with NVDA.
 Please see the display's documentation for descriptions of where these keys can be found.
@@ -2011,8 +1987,6 @@ The Lilli braille display available from [MDV http://www.mdvbologna.it/] is supp
 You do not need any specific drivers to be installed to use this display.
 Just plug in the display and configure NVDA to use it.
 
-This display does not support NVDA's automatic background braille display detection functionality.
-
 Following are the key assignments for this display with NVDA.
 Please see the display's documentation for descriptions of where these keys can be found.
 %kc:beginInclude
@@ -2068,8 +2042,6 @@ For displays which have a joystick:
 The hedo ProfiLine USB from [hedo Reha-Technik http://www.hedo.de/] is supported.
 You must first install the USB drivers provided by the manufacturer.
 
-This display does not yet support NVDA's automatic background braille display detection functionality.
-
 Following are the key assignments for this display with NVDA.
 Please see the display's documentation for descriptions of where these keys can be found.
 %kc:beginInclude
@@ -2087,8 +2059,6 @@ Please see the display's documentation for descriptions of where these keys can 
 The hedo MobilLine USB from [hedo Reha-Technik http://www.hedo.de/] is supported.
 You must first install the USB drivers provided by the manufacturer.
 
-This display does not yet support NVDA's automatic background braille display detection functionality.
-
 Following are the key assignments for this display with NVDA.
 Please see the display's documentation for descriptions of where these keys can be found.
 %kc:beginInclude
@@ -2102,16 +2072,13 @@ Please see the display's documentation for descriptions of where these keys can 
 | Say all | B6 |
 %kc:endInclude
 
-++ HumanWare Brailliant BI/B Series / BrailleNote Touch  ++[HumanWareBrailliant]
-The Brailliant BI and B series of displays  from [HumanWare http://www.humanware.com/], including the BI 14, BI 32, BI 40 and B 80, are supported when connected via USB or bluetooth.
+++ HumanWare Brailliant BI/B Series ++[HumanWareBrailliant]
+The Brailliant BI and B series of displays from [HumanWare http://www.humanware.com/], including the BI 32, BI 40 and B 80, are supported when connected via USB or bluetooth.
 If connecting via USB with the protocol set to HumanWare, you must first install the USB drivers provided by the manufacturer.
 USB drivers are not required if the protocol is set to OpenBraille.
 
-The BrailleNote Touch is also supported, and does not require any drivers to be installed.
-
-Following are the key assignments for  the Brailliant BI/B and BrailleNote touch displays with NVDA.
+Following are the key assignments for this display with NVDA.
 Please see the display's documentation for descriptions of where these keys can be found.
-+++ Key assignments for All models +++
 %kc:beginInclude
 || Name | Key |
 | Scroll braille display back | left |
@@ -2124,34 +2091,16 @@ Please see the display's documentation for descriptions of where these keys can 
 | downArrow key | space+dot4 |
 | leftArrow key | space+dot3 |
 | rightArrow key | space+dot6 |
+| NVDA Menu | c1+c3+c4+c5 (command n) |
 | shift+tab key | space+dot1+dot3 |
 | tab key | space+dot4+dot6 |
 | alt key | space+dot1+dot3+dot4 (space+m) |
 | escape key | space+dot1+dot5 (space+e) |
 | enter key | dot8 |
+| windows+d key (minimize all applications) | c1+c4+c5 (command d) |
 | windows key | space+dot3+dot4 |
 | alt+tab key | space+dot2+dot3+dot4+dot5 (space+t) |
-| NVDA Menu | space+dot1+dot3+dot4+dot5 (space+n) |
-| windows+d key (minimize all applications) | space+dot1+dot4+dot5 (space+d) |
-| Say all | space+dot1+dot2+dot3+dot4+dot5+dot6 |
-%kc:endInclude
-
-+++ Key assignments for Brailliant BI 32, BI 40 and B 80 +++ 
-%kc:beginInclude
-|| Name | Key |
-| NVDA Menu | c1+c3+c4+c5 (command n) |
-| windows+d key (minimize all applications) | c1+c4+c5 (command d) |
 | Say all | c1+c2+c3+c4+c5+c6 |
-%kc:endInclude
-
-+++ Key assignments for Brailliant BI 14 +++ 
-%kc:beginInclude
-|| Name | Key |
-| up arrow key | joystick up |
-| down arrow key | joystick down |
-| left arrow key | joystick left |
-| right arrow key | joystick right |
-| enter key | joystick action |
 %kc:endInclude
 
 ++ HIMS Braille Sense/Braille EDGE/Smart Beetle/Sync Braille Series ++[Hims]
@@ -2231,8 +2180,6 @@ The Seika Version 3, 4 and 5 (40 cells) and Seika80 (80 cells) braille displays 
 You can find more information about these displays at http://www.seika-braille.com/.
 You must first install the USB drivers provided by the manufacturer.
 
-These displays do not yet support NVDA's automatic background braille display detection functionality.
-
 Following are the key assignments for this display with NVDA.
 Please see the display's documentation for descriptions of where these keys can be found.
 %kc:beginInclude
@@ -2258,10 +2205,9 @@ The following Braille displays are supported:
 - BRAILLEX Live 20, BRAILLEX Live and BRAILLEX Live Plus (USB and bluetooth)
 -
 
-These displays do not support NVDA's automatic background braille display detection functionality.
-
 If BrxCom is installed, NVDA will use BrxCom.
 BrxCom is a tool that allows keyboard input from the braille display to function independently from a screen reader.
+A new version of BrxCom which works with NVDA will be released by Papenmeier soon.
 Keyboard input is possible with the Trio and BRAILLEX Live models.
 
 Most devices have an Easy Access Bar (EAB) that allows intuitive and fast operation.
@@ -2339,8 +2285,7 @@ The following Braille displays are supported:
 -
 
 Note that these displays can only be connected via a serial port.
-Due to this, these displays do not support NVDA's automatic background braille display detection functionality.
-You should select the port to which the display is connected after you have chosen this driver in the Braille Settings dialog.
+Therefore, you should select the port to which the display is connected after you have chosen this driver in the Braille Settings dialogue.
 
 Some of these devices have an Easy Access Bar (EAB) that allows intuitive and fast operation.
 The EAB can be moved in four directions where generally each direction has two switches.
@@ -2425,8 +2370,6 @@ The following models are supported:
 - BrailleNote Apex (USB and Bluetooth connections)
 -
 
-For BrailleNote Touch, please refer to  the [Brailliant BI Series / BrailleNote Touch HumanWareBrailliant] section.
-
 If your device supports more than one type of connection, when connecting your BrailleNote to NVDA, you must set the braille terminal port in braille terminal options.
 Please check the BrailleNote manual for details.
 In NVDA, you may also need to set the port in the Braille Settings dialog.
@@ -2476,7 +2419,6 @@ The following models are supported:
 -
 
 In NVDA, you can set the serial port to which the display is connected in the Braille Settings dialog.
-These displays do not support NVDA's automatic background braille display detection functionality.
 
 Following are the key assignments for EcoBraille displays.
 Please see the [EcoBraille documentation ftp://ftp.once.es/pub/utt/bibliotecnia/Lineas_Braille/ECO/] for descriptions of where these keys can be found.
@@ -2600,8 +2542,6 @@ When configuring the display and port to use, be sure to pay close attention to 
 
 For displays which have a braille keyboard, BRLTTY currently handles braille input itself.
 Therefore, NVDA's braille input table setting is not relevant.
-
-BRLTYY is not involved in NVDA's automatic background braille display detection functionality.
 
 Following are the BRLTTY command assignments for NVDA.
 Please see the [BRLTTY key binding lists http://mielke.cc/brltty/doc/KeyBindings/] for information about how BRLTTY commands are mapped to controls on braille displays.
