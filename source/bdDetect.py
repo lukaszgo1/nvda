@@ -100,11 +100,11 @@ def getDriversForConnectedUsbDevices():
 	"""
 	usbDevs = itertools.chain(
 		(DeviceMatch(KEY_CUSTOM, port["usbID"], port["devicePath"], port)
-		for port in hwPortUtils.listUsbDevices()),
+			for port in hwPortUtils.listUsbDevices()),
 		(DeviceMatch(KEY_HID, port["usbID"], port["devicePath"], port)
-		for port in hwPortUtils.listHidDevices() if "usbID" in port),
+			for port in hwPortUtils.listHidDevices() if port["provider"]=="usb"),
 		(DeviceMatch(KEY_SERIAL, port["usbID"], port["port"], port)
-		for port in hwPortUtils.listComPorts() if "usbID" in port)
+			for port in hwPortUtils.listComPorts() if "usbID" in port)
 	)
 	for match in usbDevs:
 		for driver, devs in _driverDevices.iteritems():
@@ -117,9 +117,13 @@ def getDriversForPossibleBluetoothDevices():
 	@return: Pairs of drivers and port information.
 	@rtype: generator of (str, L{DeviceMatch}) tuples
 	"""
-	btDevs = [DeviceMatch(KEY_SERIAL, port["bluetoothName"], port["port"], port)
-		for port in hwPortUtils.listComPorts()
-		if "bluetoothName" in port]
+	btDevs = itertools.chain(
+		(DeviceMatch(KEY_SERIAL, port["bluetoothName"], port["port"], port)
+			for port in hwPortUtils.listComPorts()
+			if "bluetoothName" in port),
+		(DeviceMatch(KEY_HID, port["hardwareID"], port["devicePath"], port)
+			for port in hwPortUtils.listHidDevices() if port["provider"]=="bluetooth"),
+	)
 	for match in btDevs:
 		for driver, devs in _driverDevices.iteritems():
 			matchFunc = devs[KEY_BLUETOOTH]
@@ -233,7 +237,7 @@ def getConnectedUsbDevicesForDriver(driver):
 		(DeviceMatch(KEY_CUSTOM, port["usbID"], port["devicePath"], port)
 		for port in hwPortUtils.listUsbDevices()),
 		(DeviceMatch(KEY_HID, port["usbID"], port["devicePath"], port)
-		for port in hwPortUtils.listHidDevices() if "usbID" in port),
+		for port in hwPortUtils.listHidDevices() if port["provider"]=="usb"),
 		(DeviceMatch(KEY_SERIAL, port["usbID"], port["port"], port)
 		for port in hwPortUtils.listComPorts() if "usbID" in port)
 	)
@@ -253,9 +257,13 @@ def getPossibleBluetoothDevicesForDriver(driver):
 	matchFunc = _driverDevices[driver][KEY_BLUETOOTH]
 	if not callable(matchFunc):
 		return
-	btDevs = (DeviceMatch(KEY_SERIAL, port["bluetoothName"], port["port"], port)
-		for port in hwPortUtils.listComPorts()
-		if "bluetoothName" in port)
+	btDevs = itertools.chain(
+		(DeviceMatch(KEY_SERIAL, port["bluetoothName"], port["port"], port)
+			for port in hwPortUtils.listComPorts()
+			if "bluetoothName" in port),
+		(DeviceMatch(KEY_HID, port["hardwareID"], port["devicePath"], port)
+			for port in hwPortUtils.listHidDevices() if port["provider"]=="bluetooth"),
+	)
 	for match in btDevs:
 		if matchFunc(match):
 			yield match
