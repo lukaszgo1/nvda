@@ -28,6 +28,7 @@ import time
 import thread
 from win32con import WM_DEVICECHANGE, DBT_DEVNODES_CHANGED
 import appModuleHandler
+from baseObject import AutoPropertyObject
 
 _driverDevices = OrderedDict()
 
@@ -100,11 +101,11 @@ def getDriversForConnectedUsbDevices():
 	"""
 	usbDevs = itertools.chain(
 		(DeviceMatch(KEY_CUSTOM, port["usbID"], port["devicePath"], port)
-			for port in hwPortUtils.listUsbDevices()),
+			for port in deviceInfoFetcher.usbDevices),
 		(DeviceMatch(KEY_HID, port["usbID"], port["devicePath"], port)
-			for port in hwPortUtils.listHidDevices() if port["provider"]=="usb"),
+			for port in deviceInfoFetcher.hidDevices if port["provider"]=="usb"),
 		(DeviceMatch(KEY_SERIAL, port["usbID"], port["port"], port)
-			for port in hwPortUtils.listComPorts() if "usbID" in port)
+			for port in deviceInfoFetcher.comPorts if "usbID" in port)
 	)
 	for match in usbDevs:
 		for driver, devs in _driverDevices.iteritems():
@@ -119,10 +120,10 @@ def getDriversForPossibleBluetoothDevices():
 	"""
 	btDevs = itertools.chain(
 		(DeviceMatch(KEY_SERIAL, port["bluetoothName"], port["port"], port)
-			for port in hwPortUtils.listComPorts()
+			for port in deviceInfoFetcher.comPorts
 			if "bluetoothName" in port),
 		(DeviceMatch(KEY_HID, port["hardwareID"], port["devicePath"], port)
-			for port in hwPortUtils.listHidDevices() if port["provider"]=="bluetooth"),
+			for port in deviceInfoFetcher.hidDevices if port["provider"]=="bluetooth"),
 	)
 	for match in btDevs:
 		for driver, devs in _driverDevices.iteritems():
@@ -131,6 +132,23 @@ def getDriversForPossibleBluetoothDevices():
 				continue
 			if matchFunc(match):
 				yield driver, match
+
+class _DeviceInfoFetcher(AutoPropertyObject):
+	"""Utility class that caches fetched info for available devices for the duration of one core pump cycle."""
+	cachePropertiesByDefault = True
+
+	def _get_comPorts(self):
+		return list(hwPortUtils.listComPorts(onlyAvailable=True))
+
+	def _get_usbDevices(self):
+		return list(hwPortUtils.listUsbDevices(onlyAvailable=True))
+
+	def _get_hidDevices(self):
+		return list(hwPortUtils.listHidDevices(onlyAvailable=True))
+
+#: The single instance of the device info fetcher.
+#: @type: L{_DeviceInfoFetcher}
+deviceInfoFetcher = _DeviceInfoFetcher()
 
 class Detector(object):
 	"""Automatically detect braille displays.
@@ -235,11 +253,11 @@ def getConnectedUsbDevicesForDriver(driver):
 	devs = _driverDevices[driver]
 	usbDevs = itertools.chain(
 		(DeviceMatch(KEY_CUSTOM, port["usbID"], port["devicePath"], port)
-		for port in hwPortUtils.listUsbDevices()),
+			for port in deviceInfoFetcher.usbDevices),
 		(DeviceMatch(KEY_HID, port["usbID"], port["devicePath"], port)
-		for port in hwPortUtils.listHidDevices() if port["provider"]=="usb"),
+			for port in deviceInfoFetcher.hidDevices if port["provider"]=="usb"),
 		(DeviceMatch(KEY_SERIAL, port["usbID"], port["port"], port)
-		for port in hwPortUtils.listComPorts() if "usbID" in port)
+			for port in deviceInfoFetcher.comPorts if "usbID" in port)
 	)
 	for match in usbDevs:
 		for type, ids in devs.iteritems():
@@ -259,10 +277,10 @@ def getPossibleBluetoothDevicesForDriver(driver):
 		return
 	btDevs = itertools.chain(
 		(DeviceMatch(KEY_SERIAL, port["bluetoothName"], port["port"], port)
-			for port in hwPortUtils.listComPorts()
+			for port in deviceInfoFetcher.comPorts
 			if "bluetoothName" in port),
 		(DeviceMatch(KEY_HID, port["hardwareID"], port["devicePath"], port)
-			for port in hwPortUtils.listHidDevices() if port["provider"]=="bluetooth"),
+			for port in deviceInfoFetcher.hidDevices if port["provider"]=="bluetooth"),
 	)
 	for match in btDevs:
 		if matchFunc(match):
