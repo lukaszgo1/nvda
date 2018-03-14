@@ -350,8 +350,15 @@ addBluetoothDevices("brailleNote", lambda m:
 	)) or m.id.startswith("Braillenote"))
 
 # brailliantB
-addUsbDevices("brailliantB", KEY_HID, {"VID_1C71&PID_C006"})
-addUsbDevices("brailliantB", KEY_SERIAL, {"VID_1C71&PID_C005"})
+addUsbDevices("brailliantB", KEY_HID, {
+	"VID_1C71&PID_C006", # Brailliant BI 32, 40 and 80
+	"VID_1C71&PID_C022", # Brailliant BI 14
+	"VID_1C71&PID_C00A", # BrailleNote Touch
+})
+addUsbDevices("brailliantB", KEY_SERIAL, {
+	"Vid_1c71&Pid_c005", # Brailliant BI 32, 40 and 80
+	"Vid_1c71&Pid_c021", # Brailliant BI 14
+})
 addBluetoothDevices("brailliantB", lambda m:
 	m.id.startswith("Brailliant B") or m.id == "Brailliant 80")
 
