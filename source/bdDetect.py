@@ -367,8 +367,15 @@ addUsbDevices("brailliantB", KEY_SERIAL, {
 	"Vid_1c71&Pid_c005", # Brailliant BI 32, 40 and 80
 	"Vid_1c71&Pid_c021", # Brailliant BI 14
 })
-addBluetoothDevices("brailliantB", lambda m:
-	m.id.startswith("Brailliant B") or m.id == "Brailliant 80")
+addBluetoothDevices("brailliantB", lambda m: (
+	m.type==KEY_SERIAL
+		and (m.id.startswith("Brailliant B")
+		or m.id == "Brailliant 80"
+		or "BrailleNote Touch" in m.id
+	)) or (m.type==KEY_HID
+		and m.deviceInfo.get("manufacturer") == "Humanware"
+		and m.deviceInfo.get("product") == "Brailliant HID"
+))
 
 # eurobraille
 addUsbDevices("eurobraille", KEY_HID, {
