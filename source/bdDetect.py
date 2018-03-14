@@ -139,8 +139,8 @@ class Detector(object):
 
 	def __init__(self):
 		self._BgScanApc = winKernel.PAPCFUNC(self._bgScan)
-		self._btComsLock = threading.Lock()
-		self._btComs = None
+		self._btDevsLock = threading.Lock()
+		self._btDevs = None
 		core.windowMessageReceived.register(self.handleWindowMessage)
 		appModuleHandler.appSwitched.register(self.pollBluetoothDevices)
 		self._stopEvent = threading.Event()
@@ -178,33 +178,33 @@ class Detector(object):
 		if detectBluetooth:
 			if self._stopEvent.isSet():
 				return
-			with self._btComsLock:
-				if self._btComs is None:
-					btComs = list(getDriversForPossibleBluetoothDevices())
-					# Cache Bluetooth com ports for next time.
-					btComsCache = []
+			with self._btDevsLock:
+				if self._btDevs is None:
+					btDevs = list(getDriversForPossibleBluetoothDevices())
+					# Cache Bluetooth devices for next time.
+					btDevsCache = []
 				else:
-					btComs = self._btComs
-					btComsCache = btComs
-			for driver, match in btComs:
+					btDevs = self._btDevs
+					btDevsCache = btDevs
+			for driver, match in btDevs:
 				if self._stopEvent.isSet():
 					return
-				if btComsCache is not btComs:
-					btComsCache.append((driver, match))
+				if btDevsCache is not btDevs:
+					btDevsCache.append((driver, match))
 				if braille.handler.setDisplayByName(driver, detected=match):
 					return
 			if self._stopEvent.isSet():
 				return
-			if btComsCache is not btComs:
-				with self._btComsLock:
-					self._btComs = btComsCache
+			if btDevsCache is not btDevs:
+				with self._btDevsLock:
+					self._btDevs = btDevsCache
 
 	def rescan(self):
 		"""Stop a current scan when in progress, and start scanning from scratch."""
 		self._stopBgScan()
-		with self._btComsLock:
-			# A Bluetooth com port might have been added.
-			self._btComs = None
+		with self._btDevsLock:
+			# A Bluetooth com port or HID device might have been added.
+			self._btDevs = None
 		self._startBgScan(usb=True, bluetooth=True)
 
 	def handleWindowMessage(self, msg=None, wParam=None):
@@ -214,8 +214,8 @@ class Detector(object):
 	def pollBluetoothDevices(self):
 		"""Poll bluetooth devices that might be in range.
 		This does not cancel the current scan and only queues a new scan when no scan is in progress."""
-		with self._btComsLock:
-			if not self._btComs:
+		with self._btDevsLock:
+			if not self._btDevs:
 				return
 		self._startBgScan(bluetooth=True)
 
