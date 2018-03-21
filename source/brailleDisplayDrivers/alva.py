@@ -15,7 +15,6 @@ from collections import OrderedDict
 from globalCommands import SCRCAT_BRAILLE
 import ui
 from baseObject import ScriptableObject
-import wx
 import time
 import datetime
 
@@ -221,9 +220,7 @@ class BrailleDisplayDriver(braille.BrailleDisplayDriver, ScriptableObject):
 				# Some internal settings have changed.
 				# For example, split point could have been set, in which case the number of cells changed.
 				# We must handle these properly.
-				# Call this on the main thread, to make sure that we can wait for reads when in non-HID mode.
-				# This can probably be changed when #1271 is implemented.
-				wx.CallAfter(self._updateSettings)
+				self._updateSettings()
 			return
 		isRelease = bool(group & ALVA_RELEASE_MASK)
 		group = group & ~ALVA_RELEASE_MASK
