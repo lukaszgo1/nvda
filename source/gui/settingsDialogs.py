@@ -1553,37 +1553,14 @@ class BrailleSettingsDialog(SettingsDialog):
 
 		# Translators: The label for a setting in braille settings to choose a braille display.
 		displayLabelText = _("Braille &display:")
-		curDispName = braille.handler.display.name
-		detectionEnabled = config.conf["braille"]["display"] == braille.AUTO_DISPLAY_NAME
-		driverList = []
-		if not detectionEnabled or curDispName == "noBraille":
-			# Translators: An option in the braille display list in the Braille Settings dialog
-			# to automatically detect and use a braille display.
-			driverList.append((braille.AUTO_DISPLAY_NAME, _("Automatic")))
-		else:
-			driverList.append((braille.AUTO_DISPLAY_NAME,
-				# Translators: An option in the braille display list in the Braille Settings dialog
-				# to automatically detect and use a braille display.
-				# %s will be replace dwith the name of the display that is currently being used.
-				_("Automatic (%s)") % braille.handler.display.description))
-		driverList.extend(braille.getDisplayList())
-		self.displayNames = [driver[0] for driver in driverList]
-		displayChoices = [driver[1] for driver in driverList]
-		self.displayList = sHelper.addLabeledControl(displayLabelText, wx.Choice, choices=displayChoices)
+		self.displayList = sHelper.addLabeledControl(displayLabelText, wx.Choice, choices=[])
 		self.Bind(wx.EVT_CHOICE, self.onDisplayNameChanged, self.displayList)
-		try:
-			if detectionEnabled:
-				selection = 0
-			else:
-				selection = self.displayNames.index(curDispName)
-			self.displayList.SetSelection(selection)
-		except:
-			pass
 
 		# Translators: The label for a setting in braille settings to choose the connection port (if the selected braille display supports port selection).
 		portsLabelText = _("&Port:")
 		self.portsList = sHelper.addLabeledControl(portsLabelText, wx.Choice, choices=[])
-		self.updatePossiblePorts()
+
+		self.updateBrailleDisplayLists()
 
 		tables = brailleTables.listTables()
 		# Translators: The label for a setting in braille settings to select the output table (the braille table used to read braille text on the braille display).
@@ -1710,7 +1687,63 @@ class BrailleSettingsDialog(SettingsDialog):
 		self.focusContextPresentationList.SetSelection(index)
 
 	def postInit(self):
+		# Finally, ensure that focus is on the list of displays.
 		self.displayList.SetFocus()
+
+	def updateBrailleDisplayLists(self):
+		curDispName = braille.handler.display.name
+		detectionEnabled = config.conf["braille"]["display"] == braille.AUTO_DISPLAY_NAME
+		driverList = []
+		if not detectionEnabled or curDispName == "noBraille":
+			# Translators: An option in the braille display list in the Braille Settings dialog
+			# to automatically detect and use a braille display.
+			driverList.append((braille.AUTO_DISPLAY_NAME, _("Automatic")))
+		else:
+			driverList.append((braille.AUTO_DISPLAY_NAME,
+				# Translators: An option in the braille display list in the Braille Settings dialog
+				# to automatically detect and use a braille display.
+				# %s will be replace dwith the name of the display that is currently being used.
+				_("Automatic (%s)") % braille.handler.display.description))
+		driverList.extend(braille.getDisplayList())
+		self.displayNames = [driver[0] for driver in driverList]
+		displayChoices = [driver[1] for driver in driverList]
+		self.displayList.Clear()
+		self.displayList.AppendItems(displayChoices)
+		try:
+			if detectionEnabled:
+				selection = 0
+			else:
+				selection = self.displayNames.index(curDispName)
+			self.displayList.SetSelection(selection)
+		except:
+			pass
+		self.updatePossiblePorts()
+
+	def updatePossiblePorts(self):
+		displayName = self.displayNames[self.displayList.GetSelection()]
+		self.possiblePorts = []
+		if displayName != "auto":
+			displayCls = braille._getDisplayDriver(displayName)
+			try:
+				self.possiblePorts.extend(displayCls.getPossiblePorts().iteritems())
+			except NotImplementedError:
+				pass
+		if self.possiblePorts:
+			self.portsList.SetItems([p[1] for p in self.possiblePorts])
+			try:
+				selectedPort = config.conf["braille"][displayName].get("port")
+				portNames = [p[0] for p in self.possiblePorts]
+				selection = portNames.index(selectedPort)
+			except (KeyError, ValueError):
+				# Display name not in config or port not valid
+				selection = 0
+			self.portsList.SetSelection(selection)
+		# If no port selection is possible or only automatic selection is available, disable the port selection control
+		enable = len(self.possiblePorts) > 0 and not (len(self.possiblePorts) == 1 and self.possiblePorts[0][0] == "auto")
+		self.portsList.Enable(enable)
+
+	def onDisplayNameChanged(self, evt):
+		self.updatePossiblePorts()
 
 	def onOk(self, evt):
 		display = self.displayNames[self.displayList.GetSelection()]
@@ -1743,32 +1776,6 @@ class BrailleSettingsDialog(SettingsDialog):
 		config.conf["braille"]["wordWrap"] = self.wordWrapCheckBox.Value
 		config.conf["braille"]["focusContextPresentation"] = self.focusContextPresentationValues[self.focusContextPresentationList.GetSelection()]
 		super(BrailleSettingsDialog,  self).onOk(evt)
-
-	def onDisplayNameChanged(self, evt):
-		self.updatePossiblePorts()
-
-	def updatePossiblePorts(self):
-		displayName = self.displayNames[self.displayList.GetSelection()]
-		self.possiblePorts = []
-		if displayName != "auto":
-			displayCls = braille._getDisplayDriver(displayName)
-			try:
-				self.possiblePorts.extend(displayCls.getPossiblePorts().iteritems())
-			except NotImplementedError:
-				pass
-		if self.possiblePorts:
-			self.portsList.SetItems([p[1] for p in self.possiblePorts])
-			try:
-				selectedPort = config.conf["braille"][displayName].get("port")
-				portNames = [p[0] for p in self.possiblePorts]
-				selection = portNames.index(selectedPort)
-			except (KeyError, ValueError):
-				# Display name not in config or port not valid
-				selection = 0
-			self.portsList.SetSelection(selection)
-		# If no port selection is possible or only automatic selection is available, disable the port selection control
-		enable = len(self.possiblePorts) > 0 and not (len(self.possiblePorts) == 1 and self.possiblePorts[0][0] == "auto")
-		self.portsList.Enable(enable)
 
 	def onShowCursorChange(self, evt):
 		self.cursorBlinkCheckBox.Enable(evt.IsChecked())
