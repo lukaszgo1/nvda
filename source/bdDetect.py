@@ -452,6 +452,7 @@ addBluetoothDevices("handyTech", lambda m: any(m.id.startswith(prefix) for prefi
 	"Active Star AS",
 	"Basic Braille BB",
 	"Braille Star 40 BS",
+	"Braillino BL",
 	"Braille Wave BW",
 	"Easy Braille EBR",
 )))
