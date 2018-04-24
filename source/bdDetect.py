@@ -299,6 +299,15 @@ def driverHasPossibleDevices(driver):
 		getPossibleBluetoothDevicesForDriver(driver)
 	), None))
 
+def driverSupportsAutoDetection(driver):
+	"""Returns whether the provided driver supports automatic detection of displays.
+	@param driver: The name of the driver.
+	@type driver: str
+	@return: C{True} if de driver supports auto detection, C{False} otherwise.
+	@rtype: bool
+	"""
+	return driver in _driverDevices
+
 ### Detection data
 # alva
 addUsbDevices("alva", KEY_HID, {
@@ -479,3 +488,4 @@ addBluetoothDevices("hims", lambda m: any(m.id.startswith(prefix) for prefix in 
 addUsbDevices("superBrl", KEY_SERIAL, {
 	"VID_10C4&PID_EA60", # SuperBraille 3.2
 })
+
