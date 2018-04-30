@@ -277,9 +277,10 @@ focusContextPresentations=[
 #: Named tuple for a region with start and end positions in a buffer
 RegionWithPositions = collections.namedtuple("RegionWithPositions",("region","start","end"))
 
-#: Automatic port constant to be used by braille displays that support the "automatic" port
+#: Automatic constant to be used by braille displays that support the "automatic" port
+#: and automatic braille display detection
 #: @type: tuple
-# Translators: String representing the automatic port selection for braille displays.
+# Translators: String representing automatic port selection for braille displays.
 AUTOMATIC_PORT = ("auto", _("Automatic"))
 #: Used in place of a specific braille display driver name to indicate that
 #: braille displays should be automatically detected and used.
